@@ -1,0 +1,188 @@
+{
+  "page": "p0052",
+  "source": "taichung",
+  "total_entries": 18,
+  "ocr_notes": "基於台中圖書館版切圖辨識，與中央圖書館校正版比較",
+  "entries": [
+    {
+      "eid": 1,
+      "kana": "ア",
+      "kanji": "阿",
+      "range": "上-1~上-3",
+      "notes": "稱呼ノ上ニ冠シテ敬意ヲ表ス語。ー公、ー媽、ー伯、ー兄等參照。ー花＝オ花サン。ー松＝オ松サン。",
+      "tone_confidence": "high",
+      "tone_note": "無聲調符號→第1聲",
+      "taichung_vs_central": "一致。兩版都清楚"
+    },
+    {
+      "eid": 2,
+      "kana": "ア2",
+      "kanji": "仔",
+      "range": "上-4~上-10",
+      "notes": "⑴小キ又ハ少キ意ヲ表ス。⑵輕蔑ノ意ヲ表ス。⑶主トシテ一字語ノ下ニ附シテ語呂ヲ整フ。⑷人名ノ下ニ附シ稱親ミノ意ヲ表ス。7行",
+      "tone_confidence": "high",
+      "tone_note": "斜線/→第2聲。台中版/符號非常清晰",
+      "taichung_vs_central": "一致。台中版/符號更清楚"
+    },
+    {
+      "eid": 3,
+      "kana": "ア2",
+      "kanji": "尚",
+      "range": "上-11",
+      "notes": "＝【尚】短條目",
+      "tone_confidence": "high",
+      "tone_note": "斜線/→第2聲",
+      "taichung_vs_central": "一致"
+    },
+    {
+      "eid": 4,
+      "kana": "ア2",
+      "kanji": "也",
+      "range": "上-12",
+      "notes": "＝【也】短條目",
+      "tone_confidence": "high",
+      "tone_note": "斜線/→第2聲",
+      "taichung_vs_central": "一致"
+    },
+    {
+      "eid": 5,
+      "kana": "ア3",
+      "kanji": "亦",
+      "range": "上-13",
+      "notes": "＝【亦ノ⊙】短條目",
+      "tone_confidence": "high",
+      "tone_note": "反斜線\\→第3聲。台中版\\符號清晰可辨",
+      "taichung_vs_central": "一致。中央版原判ア7(|)→校正為ア3(\\)。台中版\\清楚，不會與|混淆"
+    },
+    {
+      "eid": 6,
+      "kana": "ア4",
+      "kanji": "鴨",
+      "range": "上-14",
+      "notes": "鴨。アヒル。短條目",
+      "tone_confidence": "high",
+      "tone_note": "小圓點/實心水滴→第4聲（入聲）",
+      "taichung_vs_central": "【重大改善】漢字：中央版原判鶩→校正為鴨。台中版鴨字清晰可辨，無須校正"
+    },
+    {
+      "eid": 7,
+      "kana": "ア4",
+      "kanji": "百",
+      "range": "上-15~上-16",
+      "notes": "＝【百ノツマリタルモノ】。三ー五＝三百五十。五ー六＝五百六十。",
+      "tone_confidence": "high",
+      "tone_note": "實心水滴↗→第4聲（入聲，百=pah）。台中版水滴形狀更清晰",
+      "taichung_vs_central": "【改善】中央版原判ア3(\\)→校正為ア4。台中版水滴↗符號較清楚，不易與\\混淆"
+    },
+    {
+      "eid": 8,
+      "kana": "ア4",
+      "kanji": "押",
+      "range": "中-1~中-8",
+      "notes": "⑴押ス。當テル。押ヘル。押制。⑵押込。護送。⑶踏ム。ー韻ノ條參照。8行",
+      "tone_confidence": "high",
+      "tone_note": "實心水滴↗→第4聲（入聲，押=ah）",
+      "taichung_vs_central": "【改善】中央版原判ア3(\\)→校正為ア4。台中版符號清楚"
+    },
+    {
+      "eid": 9,
+      "kana": "ア4",
+      "kanji": "啊",
+      "range": "中-9~中-14",
+      "notes": "⑴モシ（人ヲ呼ビ掛クル時ノ語）。⑵…カ（疑問ノ詞ニ附セラレテ用フ）。⑶人ヲ呼ビ掛クル時稱呼ノ下ニ附ス。6行",
+      "tone_confidence": "high",
+      "tone_note": "實心水滴→第4聲。台中版啊字與聲調符號都清晰",
+      "taichung_vs_central": "【改善】中央版原判ア1→校正為ア4。台中版聲調符號清楚可見"
+    },
+    {
+      "eid": 10,
+      "kana": "ア5",
+      "kanji": "口",
+      "range": "中-15~中-17",
+      "notes": "ア。アッ。（不意ニ感ジタル時ノ語）。ー、阿爸返來喝＝アッ、オ父サンガ歸ッテ來タ。",
+      "tone_confidence": "high",
+      "tone_note": "<符號→第5聲。台中版<符號清晰",
+      "taichung_vs_central": "一致。兩版<符號都可辨"
+    },
+    {
+      "eid": 11,
+      "kana": "ア7",
+      "kanji": "亦",
+      "range": "中-18",
+      "notes": "＝【亦】短條目",
+      "tone_confidence": "high",
+      "tone_note": "豎線|→第7聲。台中版|清楚",
+      "taichung_vs_central": "一致。台中版|線清晰，不會與\\混淆"
+    },
+    {
+      "eid": 12,
+      "kana": "ア7",
+      "kanji": "□",
+      "range": "下-1~下-2",
+      "notes": "ア（承諾ノ意ヲ表ス時ノ語）。ー、好。",
+      "tone_confidence": "high",
+      "tone_note": "豎線|→第7聲。漢字仍為口部造字/不明字",
+      "taichung_vs_central": "聲調一致。台中版|清楚。漢字仍不明"
+    },
+    {
+      "eid": 13,
+      "kana": "ア8",
+      "kanji": "盒",
+      "range": "下-3",
+      "notes": "＝【盒】短條目",
+      "tone_confidence": "high",
+      "tone_note": "頓號↘→第8聲（入聲，盒=ap）。台中版↘與\\可區分",
+      "taichung_vs_central": "【重大改善】中央版原判ア4→校正為ア8。台中版↘頓號形狀清楚，盒字也清晰可辨"
+    },
+    {
+      "eid": 14,
+      "kana": "ア8",
+      "kanji": "支",
+      "range": "下-4~下-7",
+      "notes": "撓フ。ユラ＼スル。樹枝ー彼勢＝樹ノ枝ヲアチラニシナフ。涌大、船ー過來ー過去＝浪ガ大クテ船ガ彼方此方ニユラ＼スル。",
+      "tone_confidence": "high",
+      "tone_note": "頓號↘→第8聲。台中版支字清楚",
+      "taichung_vs_central": "【改善】中央版原判ア1→校正為ア8。台中版↘清楚可辨"
+    },
+    {
+      "eid": 15,
+      "kana": "ア2n",
+      "kanji": "攬",
+      "range": "下-8~下-10",
+      "notes": "抱ク。抱ヘル。ー囝仔在睏＝子供ヲ抱イテ寢テ居ル。ーー做一下＝抱ヘテ一遍ニスル。",
+      "tone_confidence": "high",
+      "tone_note": "6形符號=/+○=第2聲鼻音。台中版6形符號非常清晰！",
+      "taichung_vs_central": "【重大改善】中央版原判ア6,kanji=抱→校正為ア2n,kanji=攬。台中版：(1)6形符號清晰可辨為/+○ (2)攬字清楚可見，不會誤讀為抱"
+    },
+    {
+      "eid": 16,
+      "kana": "ア2n",
+      "kanji": "遮",
+      "range": "下-11~下-12",
+      "notes": "遮ル（或方向ノ一方ヲ）。ー北＝北ヲ遮ギル。",
+      "tone_confidence": "high",
+      "tone_note": "6形符號=/+○=第2聲鼻音",
+      "taichung_vs_central": "【改善】中央版原判ア1→校正為ア2n。台中版6形符號清楚"
+    },
+    {
+      "eid": 17,
+      "kana": "ア2n",
+      "kanji": "倚",
+      "range": "下-13~下-15",
+      "notes": "近倚ル。倚セル。嘴ーー嘴＝口ヲ口ニ近倚セル。ー耳孔在聽＝耳ヲ近倚セテ聽イテ居ル。",
+      "tone_confidence": "high",
+      "tone_note": "6形符號=/+○=第2聲鼻音",
+      "taichung_vs_central": "【改善】中央版原判ア6→校正為ア2n。台中版6形清楚"
+    },
+    {
+      "eid": 18,
+      "kana": "ア3n",
+      "kanji": "俯",
+      "range": "下-16~下-18",
+      "notes": "俯ク。傾ケル。ー在聽＝俯イテ聽イテ居ル。ー頭＝頭ヲ傾ケル。ー腰＝腰ヲ俯ケル。ー看＝俯イテ見ル。",
+      "tone_confidence": "high",
+      "tone_note": "9形符號=\\+○=第3聲鼻音。台中版9形符號清楚可辨",
+      "taichung_vs_central": "【重大改善】中央版原判ア3,kanji=倚→校正為ア3n,kanji=俯。台中版：(1)9形(\\+○)清楚 (2)俯字清晰可辨"
+    }
+  ]
+}
