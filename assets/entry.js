@@ -124,9 +124,11 @@ function senseHTML(s, i, total, modern, zhStatus, blk) {
   } else if (s.zh) {
     const tag = zhStatus === 'reviewed' ? '' : ' <span class="chip">機器翻譯・待審核</span>';
     gloss = `<span class="zh"${editAttr(base + '.zh')}${origAttr(s.zh, '')}>${esc(s.zh)}</span>${tag}`;
-  } else {
+  } else if ((s.gloss || []).length) {
     gloss = `<span class="pending">中文翻譯建置中——原文暫列：</span>` +
       `<span class="gloss"${editAttr(base + '.gloss_modern')}${origAttr(textOfUnits(s.gloss_modern), rubyDump(s.gloss_modern, true))}>${unitsHTML(s.gloss_modern, true)}</span>`;
+  } else {
+    gloss = '';                    // 原書無釋義（直接用例，如 百）：不顯示建置中
   }
   const notes = (s.notes || []).map((n, ni) =>
     `<div class="noteline"><span class="chip">註</span><span${editAttr(base + `.notes[${ni}]`)}${origAttr(textOfUnits(n.units), rubyDump(n.units, modern))}>${unitsHTML(n.units, modern)}</span></div>`).join('');
