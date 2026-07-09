@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>修訂紀錄・台日新辭書線上版</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .revtable-wrap { overflow-x: auto; }
+  table.revtable { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 720px; }
+  table.revtable th, table.revtable td {
+    border-bottom: 1px solid var(--line); padding: 8px 10px;
+    text-align: left; vertical-align: top;
+  }
+  table.revtable th {
+    color: var(--sub); font-size: 13px; letter-spacing: .08em;
+    border-bottom: 2px solid var(--line); white-space: nowrap;
+  }
+  table.revtable td.nowrap { white-space: nowrap; }
+  table.revtable .issue { color: var(--accent); }
+  .actchip {
+    font-size: 12px; color: #fff; background: var(--badge);
+    border-radius: 4px; padding: 1px 8px; white-space: nowrap;
+  }
+  .actchip.keep { background: #a09484; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="title" href="index.html">台日新辭書線上版</a>
+  <nav><a href="index.html">搜尋</a><a href="revisions.html">修訂紀錄</a><a href="about.html">關於</a></nav>
+</header>
+<main>
+  <section class="card">
+    <h2>修訂紀錄</h2>
+    <p class="hint">使用者回報經查證後的處理結果，新到舊排列。感謝每一位回報者——你們的眼睛讓這部辭典更可靠。</p>
+    <div class="revtable-wrap">
+      <table class="revtable">
+        <thead>
+          <tr><th>回報時間</th><th>條目</th><th>原本的錯誤</th><th>回報人</th><th>修訂結果</th><th>類別</th></tr>
+        </thead>
+        <tbody id="revbody"><tr><td colspan="6" class="pending">載入中…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<footer class="site">
+  《臺日新辭書》東方孝義（1889–1957）著，臺灣警察協會 1931 年出版，著作權存續期間已屆滿（公有領域）。
+  原冊圖檔來源：<a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>。
+</footer>
+<script>
+'use strict';
+const ACT = { 'engine-fix': '引擎修正', 'data-fix': '資料修正', 'ed-overlay': '校訂註記',
+              '維持照印': '維持照印', '不成立': '不成立' };
+const escR = s => String(s == null ? '' : s).replace(/[&<>"]/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+fetch('data/revisions.json').then(r => r.json()).then(d => {
+  const tb = document.getElementById('revbody');
+  const revs = d.revisions || [];
+  if (!revs.length) {
+    tb.innerHTML = '<tr><td colspan="6" class="pending">尚無修訂紀錄。</td></tr>';
+    return;
+  }
+  tb.innerHTML = revs.map(r => {
+    const keep = (r.action === '維持照印' || r.action === '不成立');
+    return `<tr>
+      <td class="nowrap">${escR((r.reported || '').slice(0, 16))}</td>
+      <td class="nowrap"><a href="entry.html?id=${encodeURIComponent(r.id || '')}">${escR(r.id)}</a></td>
+      <td class="issue">${escR(r.issue)}</td>
+      <td class="nowrap">${escR(r.reporter || '—')}</td>
+      <td>${escR(r.resolution)}</td>
+      <td><span class="actchip${keep ? ' keep' : ''}">${escR(ACT[r.action] || r.action || '')}</span></td>
+    </tr>`;
+  }).join('');
+}).catch(() => {
+  document.getElementById('revbody').innerHTML =
+    '<tr><td colspan="6" class="pending">載入失敗。</td></tr>';
+});
+</script>
+</body>
+</html>
