@@ -401,8 +401,8 @@ function kanaToPoj(kanaStr) {
           onset: c.onset, vowels: [], final: c.final
         });
       }
-      // Pattern C: mn̂g (m/n onset, ng final)
-      if ((c.onset === 'm' || c.onset === 'n') && c.final === 'ng') {
+      // Pattern C: 通用成音節 ng（tng/sng/kng/nng/mng…；fid=2 回報：返 tńg 誤 túngⁿ）
+      if (c.final === 'ng') {
         const syl = c.onset + c.final;
         syllabicAdded.push({
           display: k2pAttachTone(syl, tone, [], c.final, c.onset),
