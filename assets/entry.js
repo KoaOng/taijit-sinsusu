@@ -43,6 +43,14 @@ function unitsHTML(units, modern) {
   return (units || []).map(u => modern ? rubyModern(u) : rubyOrig(u)).join('');
 }
 
+function zhHTML(zh, units) {
+  // 中譯內台文引用：zh_units 有 poj 的段落渲染 POJ ruby（export parse_zh 產）
+  if (!units) return esc(zh);
+  return units.map(u => u.poj != null
+    ? `<ruby class="poj">${esc(u.t)}<rt>${esc(u.poj)}</rt></ruby>`
+    : esc(u.t)).join('');
+}
+
 function twModernHTML(items) {
   return (items || []).map(it => {
     if (it.poj == null) return esc(it.u);
@@ -123,7 +131,7 @@ function senseHTML(s, i, total, modern, zhStatus, blk) {
     gloss = `<span class="gloss"${editAttr(base + '.gloss')}${origAttr(textOfUnits(s.gloss), rubyDump(s.gloss, false))}>${unitsHTML(s.gloss, false)}</span>`;
   } else if (s.zh) {
     const tag = zhStatus === 'reviewed' ? '' : ' <span class="chip">機器翻譯・待審核</span>';
-    gloss = `<span class="zh"${editAttr(base + '.zh')}${origAttr(s.zh, '')}>${esc(s.zh)}</span>${tag}`;
+    gloss = `<span class="zh"${editAttr(base + '.zh')}${origAttr(s.zh, '')}>${zhHTML(s.zh, s.zh_units)}</span>${tag}`;
   } else if ((s.gloss || []).length) {
     gloss = `<span class="pending">中文翻譯建置中——原文暫列：</span>` +
       `<span class="gloss"${editAttr(base + '.gloss_modern')}${origAttr(textOfUnits(s.gloss_modern), rubyDump(s.gloss_modern, true))}>${unitsHTML(s.gloss_modern, true)}</span>`;
@@ -141,7 +149,7 @@ function senseHTML(s, i, total, modern, zhStatus, blk) {
              `<span class="eqsign">＝</span><span class="jp">${unitsHTML(x.jp, false)}</span></div>`;
     }
     const zh = x.zh
-      ? `<span class="zhline">${esc(x.zh)}</span>`
+      ? `<span class="zhline">${zhHTML(x.zh, x.zh_units)}</span>`
       : `<span class="pending">翻譯建置中</span>`;
     const orig = textOfUnits(x.tw_modern) + '＝' + (x.zh || '（翻譯建置中）');
     return `<div class="example"${editAttr(ep + '.modern')}${origAttr(orig, twModernDump(x.tw_modern))}><span class="tw">${twModernHTML(x.tw_modern)}</span>` +
@@ -200,6 +208,7 @@ function headBar(e) {
     <span class="hz"${editAttr('head')}${origAttr(h.kanji + '｜' + kanaTxt + '｜' + h.poj, '')}>${esc(h.kanji)}</span>${kanjiNote}
     <span class="kn">${headKanaHTML(h)}</span>
     <span class="pj">${esc(h.poj)}${unc}</span>${proofChip}
+    <button class="reportbtn hd" data-block="表頭">回報錯誤</button>
     <span class="loc">${esc(locText(e))}</span>
     ${navHTML(e)}
   </div></section>`;
@@ -336,6 +345,7 @@ async function init() {
     html += blockImages(e) +
             `<div class="twocol">${blockOriginal(e)}${blockModern(e)}</div>`;
   }
+  html += `<div class="footnav">${navHTML(e)}</div>`;
   root.innerHTML = html;
 
   root.addEventListener('click', ev => {

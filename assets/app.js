@@ -230,6 +230,7 @@ if (typeof document !== 'undefined') {
         (m.other ? '<span class="badge other">異調</span>' : '') +
         (skel ? '<span class="badge skel">內容建置中</span>'
               : '<span class="badge">完整</span>') +
+        `<span class="eid">${escH(e.id)}</span>` +
         (skel || !e.summary ? '' : `<span class="sm">${escH(e.summary)}</span>`) +
         '</a>';
       frag.appendChild(li);

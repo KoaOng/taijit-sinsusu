@@ -200,6 +200,15 @@ footer.site {
 .entryhead .nav { margin-left: auto; }
 .entryhead .loc { margin-left: 12px; }
 
+.results .eid {
+  margin-left: auto; font-size: 12px; color: #9b8a6d;
+  font-family: Georgia, serif; white-space: nowrap;
+}
+.footnav { display: flex; justify-content: center; margin: 4px 0 10px; }
+.footnav .nav { margin-left: 0; }
+.entryhead .reportbtn.hd { float: none; margin-left: 8px; align-self: center; }
+.zh ruby.poj rt, .zhline ruby.poj rt { font-size: 10.5px; }
+
 a.row.othertone { opacity: .55; }
 .badge.other { background: #8d8478; }
 
