@@ -1,5 +1,5 @@
 // entry.js — 詳細頁渲染（PLAN_WEBSITE W1.5）
-// 三區塊：(a) 原冊書影 crop、(b) 原冊數位化（照印）、(c) 現代化對照（POJ＋中譯）
+// 三區塊：(a) 現代化對照（POJ＋日文中譯）、(b) 原冊數位化（照印）、(c) 原冊書影 crop
 // W1.5：上一條/下一條導覽（鍵盤 ←→）＋本機校對模式（localhost 雙擊編輯→POST /feedback）
 // 資料：data/entries/{id}.json（export_site_data.py 產，含 prev/next）
 'use strict';
@@ -13,6 +13,10 @@ function esc(s) {
 }
 
 // ── ruby 渲染 ───────────────────────────────────────────
+function annBox(cls, attr, base, ann) {
+  return `<span class="rb ${cls}"${attr}><span class="ann">${ann}</span>${base}</span>`;
+}
+
 function rubyOrig(unit) {
   if (!unit.r) return esc(unit.u);
   const r = unit.r;
@@ -24,7 +28,7 @@ function rubyOrig(unit) {
     attr = ` title="校訂：${esc(r.ed.corr)}｜${esc(r.ed.note)}"`;
     cls += ' ed';
   }
-  return `<ruby class="${cls}"${attr}>${esc(unit.u)}<rt>${rt}</rt></ruby>`;
+  return annBox(cls, attr, esc(unit.u), rt);
 }
 
 function rubyModern(unit) {
@@ -36,7 +40,7 @@ function rubyModern(unit) {
   if (r.star) attr = ` title="採校訂值（見原冊區＊註）"`;
   else if (r.uncertain) attr = ` title="原書調記留空，調待考"`;
   const cls = 'poj' + (r.uncertain ? ' unc' : '') + (r.star ? ' ed' : '');
-  return `<ruby class="${cls}"${attr}>${esc(unit.u)}<rt>${rt}</rt></ruby>`;
+  return annBox(cls, attr, esc(unit.u), rt);
 }
 
 function unitsHTML(units, modern) {
@@ -47,7 +51,7 @@ function zhHTML(zh, units) {
   // 中譯內台文引用：zh_units 有 poj 的段落渲染 POJ ruby（export parse_zh 產）
   if (!units) return esc(zh);
   return units.map(u => u.poj != null
-    ? `<ruby class="poj">${esc(u.t)}<rt>${esc(u.poj)}</rt></ruby>`
+    ? annBox('poj', '', esc(u.t), esc(u.poj))
     : esc(u.t)).join('');
 }
 
@@ -58,7 +62,7 @@ function twModernHTML(items) {
     let attr = it.fromHead ? ' title="由標頭字補回（原書作ー）"' : '';
     if (it.star) attr = ' title="採校訂值（見原冊區＊註）"';
     if (it.uncertain && !attr) attr = ' title="原書調記留空，調待考"';
-    return `<ruby class="${cls}"${attr}>${esc(it.u)}<rt>${esc(it.poj)}${it.star ? '*' : ''}</rt></ruby>`;
+    return annBox(cls, attr, esc(it.u), esc(it.poj) + (it.star ? '*' : ''));
   }).join('');
 }
 
@@ -187,7 +191,7 @@ function blockModern(e) {
   const total = (e.senses || []).length;
   const senses = (e.senses || []).map((s, i) => senseHTML(s, i, total, true, e.zh_status, 'modern')).join('');
   return `<section class="card" data-blockname="現代化對照">
-    <h2>現代化對照（POJ＋中譯）<button class="reportbtn" data-block="現代化對照">回報錯誤</button></h2>
+    <h2>現代化對照（POJ＋日文中譯）<button class="reportbtn" data-block="現代化對照">回報錯誤</button></h2>
     ${senses}${refsHTML(e, true)}
   </section>`;
 }
@@ -347,8 +351,8 @@ async function init() {
   if (e.status === 'skeleton') {
     html += skeletonNote();
   } else {
-    html += blockImages(e) +
-            `<div class="twocol">${blockOriginal(e)}${blockModern(e)}</div>`;
+    html += `<div class="twocol">${blockModern(e)}${blockOriginal(e)}</div>` +
+            blockImages(e);
   }
   html += `<div class="footnav">${navHTML(e)}</div>`;
   root.innerHTML = html;
