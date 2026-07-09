@@ -162,9 +162,14 @@ function refsHTML(e, modern) {
   if (!e.refs || !e.refs.length) return '';
   return e.refs.map((r, ri) => {
     const units = modern ? r.kanji_modern : r.kanji;
-    const body = unitsHTML(units, modern);
+    const body = `＝〔${unitsHTML(units, modern)}〕`;   // 照印呈現（2026-07-09 fid=3 裁決）
     const sn = r.senses ? `<span class="chip">${esc(r.senses)}</span>` : '';
-    const nt = r.note ? `<span class="src">（${esc(r.note)}）</span>` : '';
+    let nt = '';
+    if (modern && r.note_zh) {                         // 參照註中譯（2026-07-09 fid=5 裁決）
+      nt = `<span class="src">（${zhHTML(r.note_zh, r.note_zh_units)}）</span>`;
+    } else if (r.note) {
+      nt = `<span class="src">（${esc(r.note)}）</span>`;
+    }
     return `<div class="refline"><span class="chip">參照</span><span${editAttr(`refs[${ri}]`)}${origAttr(textOfUnits(units), rubyDump(units, modern))}>${body}</span>${sn}${nt}</div>`;
   }).join('');
 }
