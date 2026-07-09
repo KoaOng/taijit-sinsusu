@@ -234,3 +234,9 @@ body.proof [data-edit]:hover { outline: 1px dashed var(--badge); outline-offset:
 @media (max-width: 900px) {
   .entryhead .nav { margin-left: 0; width: 100%; justify-content: space-between; }
 }
+
+#reportbox input[type=text] {
+  width: 100%; font-size: 15px; border: 1px solid var(--line);
+  border-radius: 6px; padding: 8px; font-family: inherit; background: #fff;
+}
+#reportbox label { display: block; margin-top: 8px; }

@@ -221,21 +221,45 @@ function skeletonNote() {
   將於該頁完成精校後上線。</p></section>`;
 }
 
-// ── 回報（複製式，公開站也可用） ─────────────────────────
+// ── 回報（線上直送 /api/feedback；失敗自動退回複製模式） ──
 let reportCtx = '';
+let reportBlock = '';
 function openReport(block, eid) {
+  reportBlock = block;
   reportCtx = `【回報】條目 ${eid}／區塊：${block}`;
   $('#reportctx').textContent = reportCtx;
   $('#reporttext').value = '';
+  try { $('#reportname').value = localStorage.getItem('tjss_reporter') || ''; } catch (e) {}
   $('#reportbox').classList.add('on');
 }
-async function copyReport() {
-  const txt = reportCtx + '\n說明：' + $('#reporttext').value.trim();
+async function fallbackCopy(txt) {
   try {
     await navigator.clipboard.writeText(txt);
-    alert('回報內容已複製。請把這段文字用 LINE 或 Email 傳給站主，謝謝！');
+    alert('線上送出暫時不可用，回報內容已複製——請把這段文字用 LINE 或 Email 傳給站主，謝謝！');
   } catch (e) {
     prompt('請手動複製以下回報內容：', txt);
+  }
+}
+async function sendReport(eid) {
+  const note = $('#reporttext').value.trim();
+  if (!note) { alert('請先描述問題內容。'); return; }
+  const reporter = $('#reportname').value.trim();
+  try { localStorage.setItem('tjss_reporter', reporter); } catch (e) {}
+  const rec = { source: 'online', ts: new Date().toISOString(), id: eid,
+                block: reportBlock, note: note, reporter: reporter };
+  let ok = false;
+  try {
+    const r = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rec),
+    });
+    ok = r.ok && (await r.json()).ok === true;
+  } catch (e) { ok = false; }
+  if (ok) {
+    alert('已送出，感謝回報！');
+  } else {
+    await fallbackCopy(reportCtx + '\n回報者：' + reporter + '\n說明：' + note);
   }
   $('#reportbox').classList.remove('on');
 }
@@ -337,7 +361,7 @@ async function init() {
     if (ev.key === 'ArrowRight' && e.next) location.href = 'entry.html?id=' + encodeURIComponent(e.next);
   });
   $('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('on'));
-  $('#reportcopy').addEventListener('click', copyReport);
+  $('#reportsend').addEventListener('click', () => sendReport(e.id));
   $('#reportcancel').addEventListener('click', () => $('#reportbox').classList.remove('on'));
   if ($('#editsend')) {
     $('#editsend').addEventListener('click', submitEdit);
