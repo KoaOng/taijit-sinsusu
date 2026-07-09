@@ -142,8 +142,12 @@ function senseHTML(s, i, total, modern, zhStatus, blk) {
   } else {
     gloss = '';                    // 原書無釋義（直接用例，如 百）：不顯示建置中
   }
-  const notes = (s.notes || []).map((n, ni) =>
-    `<div class="noteline"><span class="chip">註</span><span${editAttr(base + `.notes[${ni}]`)}${origAttr(textOfUnits(n.units), rubyDump(n.units, modern))}>${unitsHTML(n.units, modern)}</span></div>`).join('');
+  const notes = (s.notes || []).map((n, ni) => {
+    const useZh = modern && n.zh;               // sense 註中譯疊加（2026-07-09 裁決；比照 refs note_zh）
+    const body = useZh ? zhHTML(n.zh, n.zh_units) : unitsHTML(n.units, modern);
+    const orig = useZh ? origAttr(n.zh, '') : origAttr(textOfUnits(n.units), rubyDump(n.units, modern));
+    return `<div class="noteline"><span class="chip">註</span><span${editAttr(base + `.notes[${ni}]`)}${orig}>${body}</span></div>`;
+  }).join('');
   const exs = (s.examples || []).map((x, xi) => {
     const ep = base + `.examples[${xi}]`;
     if (!modern) {
