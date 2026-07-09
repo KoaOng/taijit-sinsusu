@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>條目・台日新辭書線上版</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="title" href="index.html">台日新辭書線上版</a>
+  <nav><a href="index.html">搜尋</a><a href="about.html">關於</a></nav>
+</header>
+<main id="entry"><p class="pending">載入中…</p></main>
+
+<div id="lightbox"><img src="" alt="書影放大"></div>
+
+<div id="reportbox">
+  <div class="panel">
+    <h2>回報錯誤</h2>
+    <p class="src" id="reportctx"></p>
+    <textarea id="reporttext" placeholder="請描述問題（哪個字、哪個注音／翻譯有誤，正確應為…）"></textarea>
+    <div class="actions">
+      <button id="reportcancel">取消</button>
+      <button id="reportcopy" class="primary">複製回報內容</button>
+    </div>
+  </div>
+</div>
+
+<div id="editbox">
+  <div class="panel">
+    <h2>校對修正（本機模式）</h2>
+    <p class="src" id="editctx"></p>
+    <label class="src">原值</label>
+    <textarea id="editorig" readonly></textarea>
+    <label class="src">修正值</label>
+    <textarea id="editnew"></textarea>
+    <label class="src">備註（判讀依據、頁面位置等）</label>
+    <textarea id="editnote" placeholder="例：原冊 15x 放大可見鼻音圈"></textarea>
+    <div class="actions">
+      <button id="editcancel">取消</button>
+      <button id="editsend" class="primary">送出到本機佇列</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site">
+  《臺日新辭書》東方孝義（1889–1957）著，臺灣警察協會 1931 年出版，著作權存續期間已屆滿（公有領域）。
+  原冊圖檔來源：<a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>。
+</footer>
+<script src="assets/entry.js"></script>
+</body>
+</html>

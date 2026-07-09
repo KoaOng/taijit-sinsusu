@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>關於・台日新辭書線上版</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="title" href="index.html">台日新辭書線上版</a>
+  <nav><a href="index.html">搜尋</a><a href="about.html">關於</a></nav>
+</header>
+<main>
+  <section class="card">
+    <h2>關於本書</h2>
+    <p>《臺日新辭書》為東方孝義（1889–1957）編著之台語—日語辭典，臺灣警察協會 1931 年出版，
+    收錄台語詞條約二萬三千條。詞條以臺語漢字為頭字，假名標注台語讀音並附八聲聲調符號，
+    釋義為日文，多數條目附台語用例與日譯。東方孝義 1913 年來台任警察，歷任臺灣總督府通譯、
+    警察官及司獄官練習所教官，本書於其任職臺中地方法院檢察局期間完成。</p>
+  </section>
+  <section class="card">
+    <h2>關於本站</h2>
+    <p>本站將原冊逐條數位化，每條目提供三層內容：<strong>原冊書影</strong>（條目在原書中的切圖）、
+    <strong>原冊數位化</strong>（漢字、假名、聲調、振假名照原書字面轉寫，殘字以 □、重複記號以 々〳〵 照印）、
+    <strong>現代化對照</strong>（假名注音轉寫為白話字 POJ、用例破折號補回標頭字、日文釋義譯為中文）。
+    轉寫經多通道機器驗證與人工精校；標示「內容建置中」之條目為尚未完成精校的骨架資料。</p>
+    <p id="progress" class="src">進度載入中…</p>
+    <p>發現錯誤歡迎透過各條目頁的「回報錯誤」按鈕回報。</p>
+  </section>
+  <section class="card">
+    <h2>資料來源與致謝</h2>
+    <p>原冊掃描圖檔取自
+    <a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>
+    （進入後於站內搜尋「臺日新辭書」即可瀏覽原書），特此致謝。</p>
+    <p>《臺日新辭書》著作權存續期間已屆滿，屬公有領域；本站數位化轉寫內容以照印存真為原則。</p>
+  </section>
+</main>
+<footer class="site">
+  《臺日新辭書》東方孝義（1889–1957）著，臺灣警察協會 1931 年出版，著作權存續期間已屆滿（公有領域）。
+  原冊圖檔來源：<a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>。
+</footer>
+<script>
+fetch('data/meta.json').then(r => r.json()).then(m => {
+  document.getElementById('progress').textContent =
+    `目前收錄 ${m.total} 條：完整 ${m.complete} 條、建置中 ${m.skeleton} 條（資料版本 ${m.generated}）。`;
+}).catch(() => {
+  document.getElementById('progress').textContent = '';
+});
+</script>
+</body>
+</html>

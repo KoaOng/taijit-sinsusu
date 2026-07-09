@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台日新辭書線上版・搜尋</title>
+<meta name="description" content="《臺日新辭書》（東方孝義，1931）數位化線上辭典：漢字、白話字（POJ）、假名檢索，原冊書影對照。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="title" href="index.html">台日新辭書線上版</a>
+  <nav><a href="index.html">搜尋</a><a href="about.html">關於</a></nav>
+</header>
+<main>
+  <section class="card">
+    <div class="searchbox">
+      <input id="q" type="search" placeholder="輸入漢字、POJ（白話字）或假名…" autocomplete="off">
+      <div class="mode">
+        <button data-mode="fuzzy" class="on">模糊</button>
+        <button data-mode="exact">精確</button>
+      </div>
+    </div>
+    <div class="hint">POJ 輸入式：調號數字（a5＝â）、鼻音 nn（ann3＝àⁿ）、oo＝o͘，也可直接貼調符（á）。無調輸入＝不分調；帶調輸入＝同調優先、異調降列。條目編號：p0052-1-01＝掃描頁；無 p＝書頁自動換算（0001-1-01、0001-上-01）；只打頁碼列整頁（0001 或 p0052）。</div>
+    <div class="stats" id="stats">載入索引中…</div>
+    <ul class="results" id="results"></ul>
+  </section>
+</main>
+<footer class="site">
+  《臺日新辭書》東方孝義（1889–1957）著，臺灣警察協會 1931 年出版，著作權存續期間已屆滿（公有領域）。
+  原冊圖檔來源：<a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>。
+</footer>
+<script src="assets/poj_converter.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
