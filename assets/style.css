@@ -250,3 +250,34 @@ body.proof [data-edit]:hover { outline: 1px dashed var(--badge); outline-offset:
   border-radius: 6px; padding: 8px; font-family: inherit; background: #fff;
 }
 #reportbox label { display: block; margin-top: 8px; }
+
+/* ── DESIGN_SEARCH 2026-07-10：詞形 chips＋內文搜尋分組 ── */
+.chips { margin-top: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chips .chiplabel { font-size: 13px; color: var(--sub); }
+.chips button {
+  border: 1px solid var(--line); border-radius: 14px; background: #efe9dc;
+  color: var(--ink); padding: 2px 12px; font-size: 14px; cursor: pointer;
+  font-family: Georgia, "Noto Sans TC", serif; letter-spacing: .05em;
+}
+.chips button:hover { background: #e6dcc6; }
+.chips button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chips button .cnt {
+  font-size: 11px; margin-left: 5px; color: var(--sub);
+  background: #fffdf7; border-radius: 8px; padding: 0 5px;
+}
+.chips button.on .cnt { color: var(--accent); }
+.chips .chiphint { font-size: 12px; color: #a09484; }
+
+.results li.group-hd {
+  border-bottom: 1px solid var(--line);
+  font-size: 13px; color: var(--sub); letter-spacing: .1em; font-weight: 700;
+  padding: 14px 4px 5px;
+}
+.results a.row.crow .hz { font-size: 19px; min-width: 56px; }
+.results a.row.crow .kn, .results a.row.crow .pj { font-size: 14px; }
+.results .sm.snip { white-space: normal; }
+.results .sm.snip mark {
+  background: #f2dfa8; color: inherit; padding: 0 1px; border-radius: 2px;
+}
+.badge.fld { background: #7a6f5e; }
+.badge.form { background: var(--accent); font-family: Georgia, serif; letter-spacing: .08em; }

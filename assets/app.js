@@ -1,6 +1,8 @@
 // app.js — 搜尋頁（PLAN_WEBSITE W1.5：調號搜尋／POJ 輸入式／條目編號）
+// ＋ DESIGN_SEARCH 2026-07-10：詞組形式搜尋（§5 chips/form: 語法）＋內文搜尋（§4 zh/tw/pj/jp 分組）
 // 依賴：assets/poj_converter.js 需先載入（parsePoj 單一真相＝review_live 版，build 自動同步）
-// 索引欄位見 export_site_data.py：id/kanji/kana/kana_norm/poj/poj_ascii/poj_plain/summary/status/page/seg
+// 詞目索引欄位見 export_site_data.py：id/kanji/kana/kana_norm/poj/poj_ascii/poj_plain/summary/status/page/seg/form
+// 內文索引：data/search/manifest.json ＋ c/content-*.json（{id, zh/tw/pj/jp: [[tag,text(,plain)]]}）
 'use strict';
 
 /* ══════════ 純函數（node 可測；勿在此區碰 DOM） ══════════ */
@@ -117,6 +119,117 @@ function entryToks(e) {
   return e._toks;
 }
 
+/* ── 詞組形式搜尋（DESIGN_SEARCH §5） ── */
+
+const FORM_RE = /(?:^|\s)form[:：]\s*([A-Za-z]{2,4})(?=\s|$)/;
+
+// 'form:AAB 甜' → {form:'AAB', rest:'甜'}；無 form: → {form:null, rest:原字串}
+function parseFormQuery(qRaw) {
+  const m = String(qRaw || '').match(FORM_RE);
+  if (!m) return { form: null, rest: String(qRaw || '') };
+  return { form: m[1].toUpperCase(),
+           rest: String(qRaw).replace(FORM_RE, ' ').trim() };
+}
+
+// 疊字符展開：〳〵/〱/々 → 前一字（含字比對用；IDS 序列以尾字近似，§5.3）
+function expandIterK(s) {
+  s = String(s || '').replace(/〳〵/g, '々').replace(/〱/g, '々');
+  let out = '';
+  let prev = '';
+  for (const ch of s) {
+    if (ch === '々' && prev) out += prev;
+    else { out += ch; prev = ch; }
+  }
+  return out;
+}
+
+// 詞形過濾：e.form 全等 ＋（空查詢｜含漢字｜POJ 音節相符｜一般比對）
+function formMatch(e, ctx, form) {
+  if (!e.form || e.form !== form) return false;
+  if (!ctx.q) return true;
+  if (ctx.idQ) return e.id.startsWith(ctx.idQ.prefix);
+  if (ctx.cjk) {
+    return e.kanji.includes(ctx.q) || expandIterK(e.kanji).includes(ctx.q);
+  }
+  if (ctx.latin && ctx.qToks.length === 1) {
+    const qt = ctx.qToks[0];
+    const need = qt.expl ? 2 : 1;               // 帶調＝同調；無調＝body（＋鼻音旗標寬鬆）
+    return entryToks(e).some(t => tokMatch(qt, t) >= need);
+  }
+  return !!matchEntry(e, ctx, 'fuzzy');
+}
+
+/* ── 內文搜尋（DESIGN_SEARCH §4）：欄位權重／徽章／掃描／摘錄 ── */
+
+function contentWeight(field, tag) {
+  if ((tag || '').charAt(0) === 'r') return 6;                 // 參照
+  const isGloss = /^s\d+$/.test(tag || '');
+  if (field === 'zh') return isGloss ? 0 : 1;                  // 中譯釋義 > 中譯例句/註
+  if (field === 'tw') return 2;                                // 例句台文
+  if (field === 'jp') return isGloss ? 3 : 4;                  // 日釋 > 日文例句/註
+  return 5;                                                    // 例句 POJ
+}
+
+function contentBadge(field, tag) {
+  if ((tag || '').charAt(0) === 'r') return field === 'zh' ? '參照註' : '參照';
+  const isGloss = /^s\d+$/.test(tag || '');
+  const isNote = /n\d+$/.test(tag || '');
+  if (field === 'zh') return isGloss ? '中譯釋義' : (isNote ? '中譯註' : '中譯例句');
+  if (field === 'jp') return isGloss ? '日釋' : (isNote ? '日文註' : '日文例句');
+  if (field === 'tw') return '例句台文';
+  return '例句POJ';
+}
+
+// 單一內文條目掃描 → 最佳命中 {field, tag, text, pos, len, w} | null
+// 路由（§4.3）：漢字→zh/tw/jp 子字串；假名→jp（正規化後）；拉丁→pj plain
+function contentScan(ce, ctx) {
+  let best = null;
+  const take = h => { if (!best || h.w < best.w) best = h; };
+  if (ctx.cjk) {
+    for (const f of ['zh', 'tw', 'jp']) {
+      for (const row of ce[f] || []) {
+        const pos = row[1].indexOf(ctx.q);
+        if (pos >= 0) take({ field: f, tag: row[0], text: row[1],
+                             pos: pos, len: ctx.q.length, w: contentWeight(f, row[0]) });
+      }
+    }
+    return best;
+  }
+  if (ctx.kana && ctx.qk) {
+    for (const row of ce.jp || []) {
+      if (normKanaQ(row[1]).indexOf(ctx.qk) >= 0) {
+        take({ field: 'jp', tag: row[0], text: row[1], pos: -1, len: 0,
+               w: contentWeight('jp', row[0]) });
+      }
+    }
+    return best;
+  }
+  if (ctx.latin && ctx.qplain) {
+    for (const row of ce.pj || []) {
+      if ((row[2] || '').indexOf(ctx.qplain) >= 0) {
+        take({ field: 'pj', tag: row[0], text: row[1], pos: -1, len: 0,
+               w: contentWeight('pj', row[0]) });
+      }
+    }
+    return best;
+  }
+  return best;
+}
+
+// 摘錄窗（±rad 字）；pos<0（正規化比對，無法定位）→ 只截頭
+function snippet(text, pos, len, rad) {
+  rad = rad || 20;
+  text = String(text || '');
+  if (pos < 0) {
+    return { pre: text.length > 60 ? text.slice(0, 60) + '…' : text, hit: '', post: '' };
+  }
+  const a = Math.max(0, pos - rad);
+  const b = Math.min(text.length, pos + len + rad);
+  return { pre: (a > 0 ? '…' : '') + text.slice(a, pos),
+           hit: text.slice(pos, pos + len),
+           post: text.slice(pos + len, b) + (b < text.length ? '…' : '') };
+}
+
 // ── 主比對：回 {tier, other} | null ──
 // tier：7=編號全中、6=編號前綴、5=精確、4=起首、3=包含、1=異調
 function matchEntry(e, ctx, mode) {
@@ -186,73 +299,217 @@ if (typeof document !== 'undefined') {
 
   let INDEX = [];
   let META = {};
+  let BYID = new Map();                 // id → {e, ord}（內文命中顯示詞目用）
+  let FORM = '';                        // 詞形 chip 狀態（''＝未啟用）
   let mode = 'fuzzy';
   let timer = null;
+  const CSTATE = { status: 'idle', entries: [], done: 0, total: 0 };   // 內文索引
 
   const $q = s => document.querySelector(s);
 
   const escH = s => String(s == null ? '' : s).replace(/[&<>"]/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  const render = (list, ctx) => {
+  const rowHTML = (e, m) => {
+    const skel = e.status === 'skeleton';
+    return `<a class="row${m.other ? ' othertone' : ''}" href="entry.html?id=${encodeURIComponent(e.id)}">` +
+      `<span class="hz">${escH(e.kanji)}</span>` +
+      `<span class="kn">${escH(e.kana)}</span>` +
+      `<span class="pj">${escH(e.poj)}</span>` +
+      (e.form ? `<span class="badge form">${escH(e.form)}</span>` : '') +
+      (m.other ? '<span class="badge other">異調</span>' : '') +
+      (skel ? '<span class="badge skel">內容建置中</span>'
+            : '<span class="badge">完整</span>') +
+      `<span class="eid">${escH(e.id)}</span>` +
+      (skel || !e.summary ? '' : `<span class="sm">${escH(e.summary)}</span>`) +
+      '</a>';
+  };
+
+  const contentRowHTML = hit => {
+    const rec = BYID.get(hit.id);
+    if (!rec) return '';
+    const e = rec.e;
+    const sn = snippet(hit.text, hit.pos, hit.len);
+    const snipHTML = escH(sn.pre) +
+      (sn.hit ? `<mark>${escH(sn.hit)}</mark>` : '') + escH(sn.post);
+    return `<a class="row crow" href="entry.html?id=${encodeURIComponent(e.id)}">` +
+      `<span class="hz">${escH(e.kanji)}</span>` +
+      `<span class="kn">${escH(e.kana)}</span>` +
+      `<span class="pj">${escH(e.poj)}</span>` +
+      `<span class="badge fld">${escH(contentBadge(hit.field, hit.tag))}</span>` +
+      `<span class="eid">${escH(e.id)}</span>` +
+      `<span class="sm snip">${snipHTML}</span>` +
+      '</a>';
+  };
+
+  const hintLi = (ul, html) => {
+    const li = document.createElement('li');
+    li.className = 'hint';
+    li.innerHTML = html;
+    ul.appendChild(li);
+  };
+
+  const contentStateText = () => {
+    if (CSTATE.status === 'loading') return `內文索引載入中（${CSTATE.done} 片）…`;
+    if (CSTATE.status === 'error') return '內文索引載入失敗';
+    return '';
+  };
+
+  // ── 主渲染：條目組（現行邏輯）＋內文組（§4.4 分組不混排） ──
+  const render = (list, ctx, chits) => {
     const ul = $q('#results');
     const st = $q('#stats');
     ul.innerHTML = '';
-    if (!ctx.q) {
+    if (!ctx.q && !FORM) {
       st.textContent = META.total
         ? `收錄 ${META.total} 條（完整 ${META.complete}・建置中 ${META.skeleton}）` : '';
       return;
     }
-    if (!list.length) {
-      st.textContent = '查無結果';
-      const li = document.createElement('li');
-      li.className = 'hint';
-      li.innerHTML = '查無結果。可以試試：改用<b>模糊</b>模式、拿掉調號（如 a 代替 á）、' +
-        '檢查輸入式（a5＝â、ann3＝àⁿ、oo2＝ó͘）、或用條目編號（如 p0052-1-01）。';
-      ul.appendChild(li);
+    const cload = contentStateText();
+    if (!list.length && !(chits && chits.length)) {
+      st.textContent = '查無結果' + (cload ? `（${cload}）` : '');
+      hintLi(ul, '查無結果。可以試試：改用<b>模糊</b>模式、拿掉調號（如 a 代替 á）、' +
+        '檢查輸入式（a5＝â、ann3＝àⁿ、oo2＝ó͘）、或用條目編號（如 p0052-1-01）。');
       return;
     }
     const nStrict = list.filter(x => !x.m.other).length;
     const nOther = list.length - nStrict;
-    st.textContent = ctx.toned
-      ? `找到 ${list.length} 條（同調 ${nStrict}・異調 ${nOther}）`
-      : `找到 ${list.length} 條`;
+    let stat = FORM
+      ? `詞形 ${FORM}：${list.length} 條`
+      : (ctx.toned
+        ? `條目 ${list.length}（同調 ${nStrict}・異調 ${nOther}）`
+        : `條目 ${list.length}`);
+    if (chits && chits.length) stat += `・內文 ${chits.length}`;
+    if (cload && ctx.q && !FORM && mode === 'fuzzy') stat += `・${cload}`;
+    st.textContent = stat;
+
     const frag = document.createDocumentFragment();
     for (const hit of list.slice(0, 200)) {
-      const e = hit.e, m = hit.m;
       const li = document.createElement('li');
-      const skel = e.status === 'skeleton';
-      li.innerHTML =
-        `<a class="row${m.other ? ' othertone' : ''}" href="entry.html?id=${encodeURIComponent(e.id)}">` +
-        `<span class="hz">${escH(e.kanji)}</span>` +
-        `<span class="kn">${escH(e.kana)}</span>` +
-        `<span class="pj">${escH(e.poj)}</span>` +
-        (m.other ? '<span class="badge other">異調</span>' : '') +
-        (skel ? '<span class="badge skel">內容建置中</span>'
-              : '<span class="badge">完整</span>') +
-        `<span class="eid">${escH(e.id)}</span>` +
-        (skel || !e.summary ? '' : `<span class="sm">${escH(e.summary)}</span>`) +
-        '</a>';
+      li.innerHTML = rowHTML(hit.e, hit.m);
       frag.appendChild(li);
     }
     ul.appendChild(frag);
-    if (list.length > 200) {
-      const li = document.createElement('li');
-      li.className = 'hint';
-      li.textContent = '僅顯示前 200 條，請縮小關鍵字。';
-      ul.appendChild(li);
+    if (list.length > 200) hintLi(ul, '條目僅顯示前 200 條，請縮小關鍵字。');
+
+    if (chits && chits.length) {
+      const hd = document.createElement('li');
+      hd.className = 'group-hd';
+      hd.textContent = `內文符合（${chits.length} 條）`;
+      ul.appendChild(hd);
+      const cfrag = document.createDocumentFragment();
+      for (const h of chits.slice(0, 100)) {
+        const li = document.createElement('li');
+        li.innerHTML = contentRowHTML(h);
+        cfrag.appendChild(li);
+      }
+      ul.appendChild(cfrag);
+      if (chits.length > 100) hintLi(ul, '內文僅顯示前 100 條，請縮小關鍵字。');
+    } else if (ctx.q && !FORM && mode === 'fuzzy' && CSTATE.status === 'error') {
+      hintLi(ul, '內文索引載入失敗。<a href="#" id="cretry">重新載入內文索引</a>');
     }
   };
 
+  // ── 內文命中收集（模糊模式限定；排除已在條目組者；欄位權重→冊序） ──
+  const collectContent = (ctx, seenIds) => {
+    if (mode !== 'fuzzy' || FORM || !ctx.q || ctx.idQ) return [];
+    if (!CSTATE.entries.length) return [];
+    const hits = [];
+    for (const ce of CSTATE.entries) {
+      if (seenIds.has(ce.id)) continue;
+      const h = contentScan(ce, ctx);
+      if (h) {
+        const rec = BYID.get(ce.id);
+        hits.push({ id: ce.id, ord: rec ? rec.ord : 1e9,
+                    field: h.field, tag: h.tag, text: h.text,
+                    pos: h.pos, len: h.len, w: h.w });
+      }
+    }
+    hits.sort((a, b) => (a.w - b.w) || (a.ord - b.ord));
+    return hits;
+  };
+
+  const syncURL = (qRaw, effForm) => {
+    const p = new URLSearchParams();
+    if (qRaw.trim()) p.set('q', qRaw.trim());
+    if (effForm) p.set('form', effForm);
+    const qs = p.toString();
+    history.replaceState(null, '', qs ? ('?' + qs) : location.pathname);
+  };
+
+  const updateChips = effForm => {
+    document.querySelectorAll('#formchips button').forEach(b =>
+      b.classList.toggle('on', b.dataset.form === effForm));
+  };
+
   const doSearch = () => {
-    const ctx = buildQueryCtx($q('#q').value);
+    const raw = $q('#q').value;
+    const fq = parseFormQuery(raw);
+    const effForm = fq.form || FORM;
+    const ctx = buildQueryCtx(fq.form ? fq.rest : raw);
+    syncURL(raw, effForm);
+    updateChips(effForm);
+    if (effForm) {
+      const hits = [];
+      for (const e of INDEX) {
+        if (formMatch(e, ctx, effForm)) hits.push({ e: e, m: { tier: 3, other: false } });
+      }
+      FORM = effForm;                    // form: 語法回寫 chip 狀態
+      render(hits, ctx, []);
+      return;
+    }
     const hits = [];
     for (const e of INDEX) {
       const m = matchEntry(e, ctx, mode);
       if (m) hits.push({ e: e, m: m });
     }
     hits.sort((a, b) => b.m.tier - a.m.tier);       // 同 tier 保持冊序
-    render(hits, ctx);
+    const seen = new Set(hits.map(h => h.e.id));
+    render(hits, ctx, collectContent(ctx, seen));
+  };
+
+  // ── 內文索引：閒置預抓、逐片漸進、失敗可重試（§4.5） ──
+  const loadContent = async () => {
+    if (CSTATE.status === 'loading' || CSTATE.status === 'ready') return;
+    CSTATE.status = 'loading';
+    try {
+      const man = await (await fetch('data/search/manifest.json')).json();
+      CSTATE.total = man.total || 0;
+      for (const s of man.shards || []) {
+        const d = await (await fetch('data/search/' + s.file)).json();
+        for (const ce of d.entries || []) CSTATE.entries.push(ce);
+        CSTATE.done += 1;
+        if ($q('#q').value.trim()) doSearch();     // 分片到齊一片補一片
+      }
+      CSTATE.status = 'ready';
+    } catch (e) {
+      CSTATE.status = 'error';
+    }
+    if ($q('#q').value.trim()) doSearch();
+  };
+
+  const buildChips = () => {
+    const box = $q('#formchips');
+    if (!box) return;
+    const forms = META.forms || {};
+    const pref = ['AA', 'AAB', 'ABB', 'AABB', 'ABAB'];
+    const names = pref.filter(f => forms[f])
+      .concat(Object.keys(forms).filter(f => pref.indexOf(f) < 0).sort());
+    if (!names.length) { box.style.display = 'none'; return; }
+    box.innerHTML = '<span class="chiplabel">疊詞形式：</span>' + names.map(f =>
+      `<button type="button" data-form="${escH(f)}">${escH(f)}` +
+      `<span class="cnt">${forms[f]}</span></button>`).join('') +
+      '<span class="chiphint">點選後輸入單一漢字或 POJ 音節可過濾；不輸入＝瀏覽全部</span>';
+    box.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        const f = b.dataset.form;
+        FORM = (FORM === f) ? '' : f;
+        const fq = parseFormQuery($q('#q').value);
+        if (fq.form) $q('#q').value = fq.rest;     // 清掉輸入框的 form: 語法避免打架
+        doSearch();
+        $q('#q').focus();
+      });
+    });
   };
 
   const init = async () => {
@@ -264,9 +521,11 @@ if (typeof document !== 'undefined') {
       $q('#stats').textContent = '索引載入失敗（請經由本機伺服器開啟，不能直接雙擊檔案）';
       return;
     }
+    BYID = new Map(INDEX.map((e, i) => [e.id, { e: e, ord: i }]));
     $q('#stats').textContent =
       `收錄 ${META.total} 條（完整 ${META.complete}・建置中 ${META.skeleton}）` +
       `・資料版本 ${META.generated}`;
+    buildChips();
     $q('#q').addEventListener('input', () => {
       clearTimeout(timer);
       timer = setTimeout(doSearch, 150);
@@ -285,9 +544,20 @@ if (typeof document !== 'undefined') {
         doSearch();
       });
     });
+    $q('#results').addEventListener('click', ev => {
+      if (ev.target && ev.target.id === 'cretry') {
+        ev.preventDefault();
+        CSTATE.status = 'idle';
+        loadContent();
+      }
+    });
     const params = new URLSearchParams(location.search);
-    if (params.get('q')) { $q('#q').value = params.get('q'); doSearch(); }
+    if (params.get('form')) FORM = params.get('form').toUpperCase();
+    if (params.get('q')) $q('#q').value = params.get('q');
+    if (params.get('q') || FORM) doSearch();
     $q('#q').focus();
+    const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1200));
+    idle(() => loadContent());                     // 閒置預抓內文索引
   };
   document.addEventListener('DOMContentLoaded', init);
 }
@@ -297,5 +567,9 @@ if (typeof globalThis !== 'undefined') {
   globalThis.__searchTest = { canonTok: canonTok, canonToks: canonToks, tokMatch: tokMatch,
                               seqMatch: seqMatch, parseIdQuery: parseIdQuery,
                               buildQueryCtx: buildQueryCtx, matchEntry: matchEntry,
-                              stripDia: stripDia };
+                              stripDia: stripDia,
+                              parseFormQuery: parseFormQuery, expandIterK: expandIterK,
+                              formMatch: formMatch, contentWeight: contentWeight,
+                              contentBadge: contentBadge, contentScan: contentScan,
+                              snippet: snippet, normKanaQ: normKanaQ };
 }

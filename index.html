@@ -15,13 +15,14 @@
 <main>
   <section class="card">
     <div class="searchbox">
-      <input id="q" type="search" placeholder="輸入漢字、POJ（白話字）或假名…" autocomplete="off">
+      <input id="q" type="search" placeholder="輸入漢字、POJ（白話字）、假名或中文…" autocomplete="off">
       <div class="mode">
         <button data-mode="fuzzy" class="on">模糊</button>
         <button data-mode="exact">精確</button>
       </div>
     </div>
-    <div class="hint">POJ 輸入式：調號數字（a5＝â）、鼻音 nn（ann3＝àⁿ）、oo＝o͘，也可直接貼調符（á）。無調輸入＝不分調；帶調輸入＝同調優先、異調降列。條目編號：p0052-1-01＝掃描頁；無 p＝書頁自動換算（0001-1-01、0001-上-01）；只打頁碼列整頁（0001 或 p0052）。</div>
+    <div class="chips" id="formchips"></div>
+    <div class="hint">POJ 輸入式：調號數字（a5＝â）、鼻音 nn（ann3＝àⁿ）、oo＝o͘，也可直接貼調符（á）。無調輸入＝不分調；帶調輸入＝同調優先、異調降列。除詞目外亦搜<b>內文</b>（中譯・例句台文・例句 POJ・日釋原文），內文結果分組列於條目之後。條目編號：p0052-1-01＝掃描頁；無 p＝書頁自動換算（0001-1-01、0001-上-01）；只打頁碼列整頁（0001 或 p0052）。</div>
     <div class="stats" id="stats">載入索引中…</div>
     <ul class="results" id="results"></ul>
   </section>

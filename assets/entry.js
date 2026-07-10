@@ -1,7 +1,7 @@
 // entry.js — 詳細頁渲染（PLAN_WEBSITE W1.5）
 // 三區塊：(a) 現代化對照（POJ＋日文中譯）、(b) 原冊數位化（照印）、(c) 原冊書影 crop
 // W1.5：上一條/下一條導覽（鍵盤 ←→）＋本機校對模式（localhost 雙擊編輯→POST /feedback）
-// 資料：data/entries/{id}.json（export_site_data.py 產，含 prev/next）
+// 資料：data/entries/{page}.json（一頁一檔，DESIGN_SEARCH §6.1；entries[id] 取條目，含 prev/next）
 'use strict';
 
 const $ = s => document.querySelector(s);
@@ -341,9 +341,11 @@ async function init() {
   if (!/^[\w\-]+$/.test(id)) { root.innerHTML = '<p class="pending">條目編號不正確。</p>'; return; }
   let e;
   try {
-    const r = await fetch(`data/entries/${id}.json`);
+    const page = id.split('-')[0];               // p0052-1-01 → p0052（一頁一檔）
+    const r = await fetch(`data/entries/${page}.json`);
     if (!r.ok) throw new Error(r.status);
-    e = await r.json();
+    e = ((await r.json()).entries || {})[id];
+    if (!e) throw new Error('no entry');
   } catch (err) {
     root.innerHTML = '<p class="pending">找不到此條目。</p>';
     return;

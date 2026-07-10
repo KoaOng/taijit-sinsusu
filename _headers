@@ -1,0 +1,4 @@
+# Cloudflare Pages headers（DESIGN_SEARCH §4.5）
+# 內文索引分片檔名帶內容 hash → 可永久快取；manifest/index/meta 走預設 ETag revalidation
+/data/search/c/*
+  Cache-Control: public, max-age=31536000, immutable
