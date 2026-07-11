@@ -284,3 +284,7 @@ body.proof [data-edit]:hover { outline: 1px dashed var(--badge); outline-offset:
 }
 .badge.fld { background: #7a6f5e; }
 .badge.form { background: var(--accent); font-family: Georgia, serif; letter-spacing: .08em; }
+
+/* 2026-07-11 校對回饋：sense 註/參照內嵌於日釋行（原 noteline/refline 區塊型保留給殘餘用途） */
+.notein { font-size: 16px; color: var(--sub); margin-left: .45em; }
+.refin { font-size: 19px; margin-left: .45em; }

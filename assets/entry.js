@@ -82,7 +82,7 @@ function headKanaHTML(head) {
 
 const CIRC = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
 function markerOf(sense, i, total) {
-  if (sense.marker) return esc(sense.marker);
+  if (sense.marker) return sense.marker;
   return total > 1 ? (CIRC[i] || String(i + 1)) : '';
 }
 
@@ -140,7 +140,7 @@ function blockImages(e) {
   </section>`;
 }
 
-function senseHTML(s, i, total, modern, zhStatus, blk) {
+function senseHTML(s, i, total, modern, zhStatus, e) {
   const mk = markerOf(s, i, total);
   const base = `senses[${i}]`;
   let gloss;
@@ -157,10 +157,18 @@ function senseHTML(s, i, total, modern, zhStatus, blk) {
   }
   const notes = (s.notes || []).map((n, ni) => {
     const useZh = modern && n.zh;               // sense 註中譯疊加（2026-07-09 裁決；比照 refs note_zh）
-    const body = useZh ? zhHTML(n.zh, n.zh_units) : unitsHTML(n.units, modern);
-    const orig = useZh ? origAttr(n.zh, '') : origAttr(textOfUnits(n.units), rubyDump(n.units, modern));
-    return `<div class="noteline"><span class="chip">註</span><span${editAttr(base + `.notes[${ni}]`)}${orig}>${body}</span></div>`;
+    const uu = modern ? (n.units_modern || n.units) : n.units;   // 現代化區：台文註帶 POJ（2026-07-11 回饋）
+    const body = useZh ? zhHTML(n.zh, n.zh_units) : unitsHTML(uu, modern);
+    const orig = useZh ? origAttr(n.zh, '') : origAttr(textOfUnits(uu), rubyDump(uu, modern));
+    return `<span class="notein"${editAttr(base + `.notes[${ni}]`)}${orig}>${body}</span>`;
   }).join('');
+  // sense 級參照內嵌：refs.senses 對應本義項 marker 者直接放行內（2026-07-11 回饋裁決）
+  const inrefs = ((e && e.refs) || []).map((r, ri) => ({ r, ri }))
+    .filter(x => x.r.senses && x.r.senses === mk)
+    .map(x => {
+      const p = refLineInner(x.r, x.ri, modern);
+      return `<span class="refin">${p.body}${p.nt}</span>`;
+    }).join('');
   const exs = (s.examples || []).map((x, xi) => {
     const ep = base + `.examples[${xi}]`;
     if (!modern) {
@@ -176,28 +184,36 @@ function senseHTML(s, i, total, modern, zhStatus, blk) {
     return `<div class="example"${editAttr(ep + '.modern')}${origAttr(orig, twModernDump(x.tw_modern))}><span class="tw">${twModernHTML(x.tw_modern)}</span>` +
            `<span class="eqsign">＝</span>${zh}</div>`;
   }).join('');
-  return `<div class="sense">${mk ? `<span class="marker">${mk}</span>` : ''}${gloss}${notes}${exs}</div>`;
+  return `<div class="sense">${mk ? `<span class="marker">${esc(mk)}</span>` : ''}${gloss}${notes}${inrefs}${exs}</div>`;
+}
+
+function refLineInner(r, ri, modern) {
+  const units = modern ? r.kanji_modern : r.kanji;
+  const body = `＝〔${unitsHTML(units, modern)}〕`;   // 照印呈現（2026-07-09 fid=3 裁決）
+  let nt = '';
+  if (modern && r.note_zh) {                         // 參照註中譯（2026-07-09 fid=5 裁決）
+    nt = `<span class="src">（${zhHTML(r.note_zh, r.note_zh_units)}）</span>`;
+  } else if (r.note) {
+    nt = `<span class="src">（${esc(r.note)}）</span>`;
+  }
+  return { body: `<span${editAttr(`refs[${ri}]`)}${origAttr(textOfUnits(units), rubyDump(units, modern))}>${body}</span>`, nt };
 }
 
 function refsHTML(e, modern) {
   if (!e.refs || !e.refs.length) return '';
+  const total = (e.senses || []).length;
+  const markers = (e.senses || []).map((s, i) => markerOf(s, i, total));
   return e.refs.map((r, ri) => {
-    const units = modern ? r.kanji_modern : r.kanji;
-    const body = `＝〔${unitsHTML(units, modern)}〕`;   // 照印呈現（2026-07-09 fid=3 裁決）
+    if (r.senses && markers.indexOf(r.senses) >= 0) return '';   // 已內嵌於該義項行（2026-07-11 回饋）
+    const p = refLineInner(r, ri, modern);
     const sn = r.senses ? `<span class="chip">${esc(r.senses)}</span>` : '';
-    let nt = '';
-    if (modern && r.note_zh) {                         // 參照註中譯（2026-07-09 fid=5 裁決）
-      nt = `<span class="src">（${zhHTML(r.note_zh, r.note_zh_units)}）</span>`;
-    } else if (r.note) {
-      nt = `<span class="src">（${esc(r.note)}）</span>`;
-    }
-    return `<div class="refline"><span class="chip">參照</span><span${editAttr(`refs[${ri}]`)}${origAttr(textOfUnits(units), rubyDump(units, modern))}>${body}</span>${sn}${nt}</div>`;
+    return `<div class="refline"><span class="chip">參照</span>${p.body}${sn}${p.nt}</div>`;
   }).join('');
 }
 
 function blockOriginal(e) {
   const total = (e.senses || []).length;
-  const senses = (e.senses || []).map((s, i) => senseHTML(s, i, total, false, e.zh_status, 'orig')).join('');
+  const senses = (e.senses || []).map((s, i) => senseHTML(s, i, total, false, e.zh_status, e)).join('');
   return `<section class="card" data-blockname="原冊數位化">
     <h2>原冊數位化（照印）<button class="reportbtn" data-block="原冊數位化">回報錯誤</button></h2>
     ${senses}${refsHTML(e, false)}
@@ -206,7 +222,7 @@ function blockOriginal(e) {
 
 function blockModern(e) {
   const total = (e.senses || []).length;
-  const senses = (e.senses || []).map((s, i) => senseHTML(s, i, total, true, e.zh_status, 'modern')).join('');
+  const senses = (e.senses || []).map((s, i) => senseHTML(s, i, total, true, e.zh_status, e)).join('');
   return `<section class="card" data-blockname="現代化對照">
     <h2>現代化對照（POJ＋日文中譯）<button class="reportbtn" data-block="現代化對照">回報錯誤</button></h2>
     ${senses}${refsHTML(e, true)}
@@ -233,7 +249,7 @@ function headBar(e) {
   const skelChip = e.status === 'skeleton'
     ? '<span class="chip skel" title="表頭為機器辨識初稿，尚未精校">建置中</span>' : '';
   return `<section class="card"><div class="entryhead">
-    <span class="hz"${editAttr('head')}${origAttr(h.kanji + '｜' + kanaTxt + '｜' + h.poj, '')}>${esc(h.kanji)}</span>${kanjiNote}
+    <span class="hz"${editAttr('head')}${origAttr(h.kanji + '｜' + kanaTxt + '｜' + h.poj, '')}>${esc(h.kanji_disp || h.kanji)}</span>${kanjiNote}
     <span class="kn">${headKanaHTML(h)}</span>
     <span class="pj">${esc(h.poj)}${unc}</span>${skelChip}${proofChip}
     <button class="reportbtn hd" data-block="表頭">回報錯誤</button>
