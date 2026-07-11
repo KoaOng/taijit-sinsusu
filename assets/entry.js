@@ -6,6 +6,10 @@
 
 const $ = s => document.querySelector(s);
 const LOCAL = (location.hostname === '127.0.0.1' || location.hostname === 'localhost');
+// 圖床基底（PLAN_WEBSITE 裁決 5／S0）：本機校對走本地 img/（圖床伺服器），
+// 線上走 R2 公開網址。R2_BASE 由 S0 部署時填入；空字串＝退回站內 img/（git 圖）。
+const R2_BASE = 'https://pub-71b2d9166d2e4a9aa42c76a5f89a94a2.r2.dev/';
+const IMG_BASE = (LOCAL || !R2_BASE) ? 'img/' : R2_BASE;
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g,
@@ -112,17 +116,26 @@ function editAttr(path) {
 
 // ── 三區塊 ──────────────────────────────────────────────
 function blockImages(e) {
-  if (!e.crops || !e.crops.length) return '';
-  const imgs = e.crops.map(n =>
-    `<img src="img/crops/${esc(n)}.webp" alt="${esc(n)}" loading="lazy" data-zoom="img/crops/${esc(n)}.webp">`
-  ).join('');
-  const crossNote = e.cross
+  const hasCrops = e.crops && e.crops.length;
+  if (!hasCrops && !e.page_image) return '';
+  const imgs = hasCrops ? e.crops.map(n =>
+    `<img src="${IMG_BASE}crops/${esc(n)}.webp" alt="${esc(n)}" loading="lazy" data-zoom="${IMG_BASE}crops/${esc(n)}.webp">`
+  ).join('') : '';
+  const crossNote = (hasCrops && e.cross)
     ? `<div class="src">（本條目跨${esc(e.cross.to || '段')}，接續欄書影已列於末端）</div>` : '';
+  const cropsDesc = (e.crops || []).join('、')
+    + (e.cross ? `｜跨${e.cross.to || '段'}接續` : '')
+    + `（掃描頁 ${e.page}・第${e.seg_num || ''}排・欄${(e.cols || []).join('–')}）`;
+  const proofBtn = (LOCAL && hasCrops)
+    ? `<button class="reportbtn proofbtn" data-edit="crops" data-orig="${esc(cropsDesc)}" title="回報切圖問題（缺欄、切偏、順序等）→ 本機佇列">本機校對</button>` : '';
+  const locStr = e.seg_num
+    ? `掃描頁 ${esc(e.page)}・第${esc(String(e.seg_num))}排 欄${esc((e.cols || []).join('–'))}`
+    : `掃描頁 ${esc(e.page)}`;
   return `<section class="card imgcard">
-    <h2>原冊書影<button class="reportbtn" data-block="原冊書影">回報錯誤</button></h2>
-    <div class="strips">${imgs}</div>${crossNote}
-    <div class="tools"><a href="img/pages/${esc(e.page_image)}.webp" data-zoom="img/pages/${esc(e.page_image)}.webp">看整頁書影</a>
-    　<span class="src">掃描頁 ${esc(e.page)}・第${esc(String(e.seg_num || ''))}排 欄${esc((e.cols || []).join('–'))}</span></div>
+    <h2>原冊書影<button class="reportbtn" data-block="原冊書影">回報錯誤</button>${proofBtn}</h2>
+    ${imgs ? `<div class="strips">${imgs}</div>` : ''}${crossNote}
+    <div class="tools"><a href="${IMG_BASE}pages/${esc(e.page_image)}.webp" data-zoom="${IMG_BASE}pages/${esc(e.page_image)}.webp">看整頁書影</a>
+    　<span class="src">${locStr}</span></div>
     <div class="src">原冊圖檔來源：<a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a></div>
   </section>`;
 }
@@ -217,10 +230,12 @@ function headBar(e) {
   const unc = h.poj_uncertain ? '<span class="unc" title="部分調記原書留空">ˀ</span>' : '';
   const kanaTxt = (h.kana || []).map(t => t.k + (t.tn || '') + (t.sep === '--' ? '--' : t.sep ? ' ' : '')).join('');
   const proofChip = LOCAL ? '<span class="chip proof" title="localhost 校對模式：雙擊任何文字段可回報修正">校對模式</span>' : '';
+  const skelChip = e.status === 'skeleton'
+    ? '<span class="chip skel" title="表頭為機器辨識初稿，尚未精校">建置中</span>' : '';
   return `<section class="card"><div class="entryhead">
     <span class="hz"${editAttr('head')}${origAttr(h.kanji + '｜' + kanaTxt + '｜' + h.poj, '')}>${esc(h.kanji)}</span>${kanjiNote}
     <span class="kn">${headKanaHTML(h)}</span>
-    <span class="pj">${esc(h.poj)}${unc}</span>${proofChip}
+    <span class="pj">${esc(h.poj)}${unc}</span>${skelChip}${proofChip}
     <button class="reportbtn hd" data-block="表頭">回報錯誤</button>
     <span class="loc">${esc(locText(e))}</span>
     ${navHTML(e)}
@@ -241,8 +256,9 @@ function locText(e) {
 }
 
 function skeletonNote() {
-  return `<section class="card"><p>本條目<strong>資料建置中</strong>。原冊內容（書影、日文釋義、用例、現代化對照）
-  將於該頁完成精校後上線。</p></section>`;
+  return `<section class="card"><p>本條目<strong>資料建置中</strong>——表頭（漢字・假名・POJ）為機器辨識初稿，
+  尚未精校；日文釋義、用例與現代化對照將於精校完成後上線。
+  下方原冊書影可直接閱讀本條原文；發現表頭錯誤，歡迎按「回報錯誤」告訴我們。</p></section>`;
 }
 
 // ── 回報（線上直送 /api/feedback；失敗自動退回複製模式） ──
@@ -355,7 +371,7 @@ async function init() {
   if (LOCAL) document.body.classList.add('proof');
   let html = headBar(e);
   if (e.status === 'skeleton') {
-    html += skeletonNote();
+    html += skeletonNote() + blockImages(e);   // 骨架：建置中說明＋該條原冊書影（B 版）
   } else {
     html += `<div class="twocol">${blockModern(e)}${blockOriginal(e)}</div>` +
             blockImages(e);
@@ -371,6 +387,8 @@ async function init() {
       $('#lightbox').classList.add('on');
       return;
     }
+    const pb = ev.target.closest('.proofbtn');
+    if (pb) { openEdit(pb); return; }
     const rb = ev.target.closest('.reportbtn');
     if (rb) openReport(rb.dataset.block, e.id);
   });

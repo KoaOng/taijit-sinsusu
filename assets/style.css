@@ -156,6 +156,8 @@ sup.tn { font-size: 10px; color: inherit; }
   padding: 1px 8px; cursor: pointer; float: right;
 }
 .reportbtn:hover { background: #efe9dc; }
+.reportbtn.proofbtn { border-color: #6b4b2d; color: #6b4b2d; font-weight: 700; }
+.reportbtn.proofbtn:hover { background: #6b4b2d; color: #f0ead9; }
 #reportbox {
   position: fixed; inset: 0; background: rgba(30,25,18,.5);
   display: none; align-items: center; justify-content: center; z-index: 98; padding: 16px;
@@ -214,6 +216,7 @@ a.row.othertone { opacity: .55; }
 .badge.other { background: #8d8478; }
 
 .chip.proof { background: #6b4b2d; color: #f0ead9; border-color: #6b4b2d; }
+.chip.skel { background: #a09484; color: #fff; border-color: #a09484; }
 body.proof [data-edit] { cursor: text; }
 body.proof [data-edit]:hover { outline: 1px dashed var(--badge); outline-offset: 2px; }
 .edited { background: #f6e8b8 !important; border-radius: 3px; }
