@@ -2,7 +2,8 @@
 // ＋ DESIGN_SEARCH 2026-07-10：詞組形式搜尋（§5 chips/form: 語法）＋內文搜尋（§4 zh/tw/pj/jp 分組）
 // 依賴：assets/poj_converter.js 需先載入（parsePoj 單一真相＝review_live 版，build 自動同步）
 // 詞目索引欄位見 export_site_data.py：id/kanji/kana/kana_norm/poj/poj_ascii/poj_plain/summary/status/page/seg/form
-// 內文索引：data/search/manifest.json ＋ c/content-*.json（{id, zh/tw/pj/jp: [[tag,text(,plain)]]}）
+// 內文索引：data/search/manifest.json ＋ c/content-*.json（{id, zh/tw/pj/jp: [[tag,text(,plain)]],
+//   fm: [[tag,sig,pos,len,漢字段(,來源詞目id)]]}——例句 POJ 詞形片段，DESIGN_SEARCH §5.4）
 'use strict';
 
 /* ══════════ 純函數（node 可測；勿在此區碰 DOM） ══════════ */
@@ -216,6 +217,47 @@ function contentScan(ce, ctx) {
   return best;
 }
 
+/* ── 內文詞形命中（DESIGN_SEARCH §5.4）：例句 POJ 疊詞片段 ── */
+
+// 詞形片段 vs 查詢：空＝過；漢字＝漢字段含字（々展開）；
+// 單 POJ 音節＝tokMatch（帶調同調、無調寬鬆）；其他拉丁＝片段純字母子字串；假名＝不合
+function formSpanMatch(spanText, kanji, ctx) {
+  if (!ctx.q) return true;
+  if (ctx.cjk) {
+    const kj = kanji || '';
+    return kj.includes(ctx.q) || expandIterK(kj).includes(ctx.q);
+  }
+  if (ctx.latin && ctx.qToks.length === 1) {
+    const qt = ctx.qToks[0];
+    const need = qt.expl ? 2 : 1;               // 帶調＝同調；無調＝body 寬鬆
+    return canonToks(spanText).some(t => tokMatch(qt, t) >= need);
+  }
+  if (ctx.latin && ctx.qplain) {
+    return stripDia(spanText).replace(/[^a-z]/g, '').includes(ctx.qplain);
+  }
+  return false;
+}
+
+// 內文條目 → 詞形命中列（每例句每形式一列；span 取第一個符合查詢者）
+// ce.fm 列：[tag, sig, pos, len, 漢字段(, 來源詞目id)]
+function contentFormMatch(ce, ctx, form) {
+  if (!ce.fm || !ce.fm.length) return [];
+  if (ctx.idQ && !ce.id.startsWith(ctx.idQ.prefix)) return [];
+  const fctx = ctx.idQ ? { q: '' } : ctx;       // 編號查詢＝已過濾條目，不再比片段
+  const out = [];
+  const done = new Set();
+  for (const r of ce.fm) {
+    if (r[1] !== form || done.has(r[0])) continue;
+    const pjrow = (ce.pj || []).find(p => p[0] === r[0]);
+    if (!pjrow) continue;
+    const spanText = pjrow[1].slice(r[2], r[2] + r[3]);
+    if (!formSpanMatch(spanText, r[4], fctx)) continue;
+    done.add(r[0]);
+    out.push({ tag: r[0], text: pjrow[1], pos: r[2], len: r[3], src: r[5] || null });
+  }
+  return out;
+}
+
 // 摘錄窗（±rad 字）；pos<0（正規化比對，無法定位）→ 只截頭
 function snippet(text, pos, len, rad) {
   rad = rad || 20;
@@ -336,6 +378,7 @@ if (typeof document !== 'undefined') {
       `<span class="hz">${escH(e.kanji)}</span>` +
       `<span class="kn">${escH(e.kana)}</span>` +
       `<span class="pj">${escH(e.poj)}</span>` +
+      (hit.sig ? `<span class="badge form">${escH(hit.sig)}</span>` : '') +
       `<span class="badge fld">${escH(contentBadge(hit.field, hit.tag))}</span>` +
       `<span class="eid">${escH(e.id)}</span>` +
       `<span class="sm snip">${snipHTML}</span>` +
@@ -375,12 +418,12 @@ if (typeof document !== 'undefined') {
     const nStrict = list.filter(x => !x.m.other).length;
     const nOther = list.length - nStrict;
     let stat = FORM
-      ? `詞形 ${FORM}：${list.length} 條`
+      ? `詞形 ${FORM}：條目 ${list.length}・內文 ${(chits || []).length}`
       : (ctx.toned
         ? `條目 ${list.length}（同調 ${nStrict}・異調 ${nOther}）`
         : `條目 ${list.length}`);
-    if (chits && chits.length) stat += `・內文 ${chits.length}`;
-    if (cload && ctx.q && !FORM && mode === 'fuzzy') stat += `・${cload}`;
+    if (!FORM && chits && chits.length) stat += `・內文 ${chits.length}`;
+    if (cload && (FORM || (ctx.q && mode === 'fuzzy'))) stat += `・${cload}`;
     st.textContent = stat;
 
     const frag = document.createDocumentFragment();
@@ -405,7 +448,7 @@ if (typeof document !== 'undefined') {
       }
       ul.appendChild(cfrag);
       if (chits.length > 100) hintLi(ul, '內文僅顯示前 100 條，請縮小關鍵字。');
-    } else if (ctx.q && !FORM && mode === 'fuzzy' && CSTATE.status === 'error') {
+    } else if ((FORM || (ctx.q && mode === 'fuzzy')) && CSTATE.status === 'error') {
       hintLi(ul, '內文索引載入失敗。<a href="#" id="cretry">重新載入內文索引</a>');
     }
   };
@@ -455,7 +498,18 @@ if (typeof document !== 'undefined') {
         if (formMatch(e, ctx, effForm)) hits.push({ e: e, m: { tier: 3, other: false } });
       }
       FORM = effForm;                    // form: 語法回寫 chip 狀態
-      render(hits, ctx, []);
+      const chits = [];                  // 內文組：例句詞形片段（§5.4）
+      for (const ce of CSTATE.entries) {
+        for (const h of contentFormMatch(ce, ctx, effForm)) {
+          const rec = BYID.get(ce.id);
+          chits.push({ id: ce.id, ord: rec ? rec.ord : 1e9, field: 'pj',
+                       tag: h.tag, text: h.text, pos: h.pos, len: h.len,
+                       w: 5, sig: effForm });
+        }
+      }
+      chits.sort((a, b) => a.ord - b.ord);
+      if (CSTATE.status === 'idle') loadContent();   // chip 先於閒置預抓時主動載
+      render(hits, ctx, chits);
       return;
     }
     const hits = [];
@@ -479,27 +533,31 @@ if (typeof document !== 'undefined') {
         const d = await (await fetch('data/search/' + s.file)).json();
         for (const ce of d.entries || []) CSTATE.entries.push(ce);
         CSTATE.done += 1;
-        if ($q('#q').value.trim()) doSearch();     // 分片到齊一片補一片
+        if ($q('#q').value.trim() || FORM) doSearch();   // 分片到齊一片補一片
       }
       CSTATE.status = 'ready';
     } catch (e) {
       CSTATE.status = 'error';
     }
-    if ($q('#q').value.trim()) doSearch();
+    if ($q('#q').value.trim() || FORM) doSearch();
   };
 
   const buildChips = () => {
     const box = $q('#formchips');
     if (!box) return;
     const forms = META.forms || {};
+    const cf = META.cforms || {};                  // 例句層計數（§5.4）
+    const tot = {};
+    for (const k in forms) tot[k] = (tot[k] || 0) + forms[k];
+    for (const k in cf) tot[k] = (tot[k] || 0) + cf[k];
     const pref = ['AA', 'AAB', 'ABB', 'AABB', 'ABAB'];
-    const names = pref.filter(f => forms[f])
-      .concat(Object.keys(forms).filter(f => pref.indexOf(f) < 0).sort());
+    const names = pref.filter(f => tot[f])
+      .concat(Object.keys(tot).filter(f => pref.indexOf(f) < 0).sort());
     if (!names.length) { box.style.display = 'none'; return; }
     box.innerHTML = '<span class="chiplabel">疊詞形式：</span>' + names.map(f =>
       `<button type="button" data-form="${escH(f)}">${escH(f)}` +
-      `<span class="cnt">${forms[f]}</span></button>`).join('') +
-      '<span class="chiphint">點選後輸入單一漢字或 POJ 音節可過濾；不輸入＝瀏覽全部</span>';
+      `<span class="cnt">${tot[f]}</span></button>`).join('') +
+      '<span class="chiphint">點選後輸入單一漢字或 POJ 音節可過濾；不輸入＝瀏覽全部（計數含條目與例句）</span>';
     box.querySelectorAll('button').forEach(b => {
       b.addEventListener('click', () => {
         const f = b.dataset.form;
@@ -571,5 +629,7 @@ if (typeof globalThis !== 'undefined') {
                               parseFormQuery: parseFormQuery, expandIterK: expandIterK,
                               formMatch: formMatch, contentWeight: contentWeight,
                               contentBadge: contentBadge, contentScan: contentScan,
-                              snippet: snippet, normKanaQ: normKanaQ };
+                              snippet: snippet, normKanaQ: normKanaQ,
+                              formSpanMatch: formSpanMatch,
+                              contentFormMatch: contentFormMatch };
 }
