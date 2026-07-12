@@ -232,16 +232,21 @@ function senseHTML(s, i, total, modern, zhStatus, e) {
 
 function refLineInner(r, ri, modern) {
   const units = modern ? r.kanji_modern : r.kanji;
-  let inner = `〔${unitsHTML(units, modern)}〕`;
+  // 參照註三型位置（批次二 2026-07-12 J-B2-5／R04·R11 裁決）：in＝括弧內（百）、before＝槽前（閑）、after＝槽後（攬々）
+  const noteHTML = (modern && r.note_zh) ? zhHTML(r.note_zh, r.note_zh_units)
+                 : (r.note ? esc(r.note) : '');
+  let inner = `〔${unitsHTML(units, modern)}${(noteHTML && r.note_pos === 'in') ? `<span class="src">${noteHTML}</span>` : ''}〕`;
   if (r.target) {                          // 參照超連結（2026-07-12 夥伴回饋；查無目標不連）
     inner = `<a class="reflink" href="entry.html?id=${encodeURIComponent(r.target)}" title="前往參照條目">${inner}</a>`;
   }
-  const body = `＝${inner}`;               // 照印呈現（2026-07-09 fid=3 裁決）
+  let body = `＝${inner}`;                 // 照印呈現（2026-07-09 fid=3 裁決）
   let nt = '';
-  if (modern && r.note_zh) {                         // 參照註中譯（2026-07-09 fid=5 裁決）
-    nt = `<span class="src">（${zhHTML(r.note_zh, r.note_zh_units)}）</span>`;
-  } else if (r.note) {
-    nt = `<span class="src">（${esc(r.note)}）</span>`;
+  if (noteHTML && r.note_pos === 'before') {
+    body = `<span class="src">（${noteHTML}）</span>${body}`;
+  } else if (noteHTML && r.note_pos === 'after') {
+    nt = `<span class="src">（${noteHTML}）。</span>`;
+  } else if (noteHTML && r.note_pos !== 'in') {
+    nt = `<span class="src">（${noteHTML}）</span>`;
   }
   return { body: `<span${editAttr(`refs[${ri}]`)}${origAttr(textOfUnits(units), rubyDump(units, modern))}>${body}</span>`, nt };
 }
