@@ -205,12 +205,14 @@ function senseHTML(s, i, total, modern, zhStatus, e) {
     const orig = useZh ? origAttr(n.zh, '') : origAttr(textOfUnits(uu), rubyDump(uu, modern));
     return `<span class="notein"${editAttr(base + `.notes[${ni}]`)}${orig}>${body}</span>`;
   }).join('');
-  // sense 級參照內嵌：refs.senses 對應本義項 marker 者直接放行內（2026-07-11 回饋裁決）
+  // sense 級參照內嵌：ref.sense_i＝本義項者直接放行內（2026-07-12 使用者補裁：不另立參照行）
+  // r.senses＝目標圈碼（亦①、欲②④）→ 行內 chip 顯示
   const inrefs = ((e && e.refs) || []).map((r, ri) => ({ r, ri }))
-    .filter(x => x.r.senses && x.r.senses === mk)
+    .filter(x => (typeof x.r.sense_i === 'number' ? x.r.sense_i === i : x.r.senses && x.r.senses === mk))
     .map(x => {
       const p = refLineInner(x.r, x.ri, modern);
-      return `<span class="refin">${p.body}${p.nt}</span>`;
+      const sn = x.r.senses ? `<span class="chip">${esc(x.r.senses)}</span>` : '';
+      return `<span class="refin">${p.body}${sn}${p.nt}</span>`;
     }).join('');
   const exs = (s.examples || []).map((x, xi) => {
     const ep = base + `.examples[${xi}]`;
@@ -252,11 +254,13 @@ function refLineInner(r, ri, modern) {
 }
 
 function refsHTML(e, modern) {
+  // 2026-07-12 使用者補裁：帶 sense_i 的參照一律行內（senseHTML），此處僅殘留無定位者（正常應為零）
   if (!e.refs || !e.refs.length) return '';
   const total = (e.senses || []).length;
   const markers = (e.senses || []).map((s, i) => markerOf(s, i, total));
   return e.refs.map((r, ri) => {
-    if (r.senses && markers.indexOf(r.senses) >= 0) return '';   // 已內嵌於該義項行（2026-07-11 回饋）
+    if (typeof r.sense_i === 'number' && r.sense_i < total) return '';   // 已內嵌於該義項行
+    if (r.senses && markers.indexOf(r.senses) >= 0) return '';           // 舊資料 marker 對應保險
     const p = refLineInner(r, ri, modern);
     const sn = r.senses ? `<span class="chip">${esc(r.senses)}</span>` : '';
     return `<div class="refline"><span class="chip">參照</span>${p.body}${sn}${p.nt}</div>`;
