@@ -19,6 +19,29 @@ function normKanaQ(s) {
   return hira2kata(s).replace(/[·̄̅\s0-9a-zA-Z\-ー]/g, '');
 }
 function hasCJK(s) { return /[㐀-鿿豈-﫿□々]/.test(s); }
+// 混合缺字表頭：□ 逐位以對應 POJ 音節取代（□□哭 → āuⁿ āuⁿ 哭；2026-07-12 夥伴回饋補充）
+// 音節數與字位數不合（IDS 等）＝不替換照舊；全 □ 走 isBlankKanji（POJ 主位）不經此
+function mixKanjiParts(kanji, poj) {
+  kanji = String(kanji || '');
+  if (kanji.indexOf('□') < 0) return null;
+  const units = [...kanji];
+  if (units.every(u => u === '□' || u === '々')) return null;
+  const syls = String(poj || '').split(/-+/).filter(Boolean);
+  if (!syls.length || syls.length !== units.length) return null;
+  return units.map((u, i) => u === '□' ? { t: syls[i], pj: true } : { t: u, pj: false });
+}
+
+// 全 □（殘字）表頭：主位改顯 POJ（2026-07-12 夥伴回饋；々 跟前字同視為空位）
+function isBlankKanji(s) {
+  s = String(s || '');
+  let blank = false;
+  for (const ch of s) {
+    if (ch === '□') { blank = true; continue; }
+    if (ch === '々') continue;
+    return false;
+  }
+  return blank;
+}
 function hasKana(s) { return /[ぁ-ゖァ-ヺ]/.test(s); }
 function hasLatinLoose(s) { return /[a-z]/.test(stripDia(s)); }   // á â ā a̍ 也算拉丁輸入
 
@@ -352,12 +375,23 @@ if (typeof document !== 'undefined') {
   const escH = s => String(s == null ? '' : s).replace(/[&<>"]/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+  // 主位組：漢字→POJ（全□＝POJ 主位、□ 退次要；混合□＝逐位 POJ 取代）——2026-07-12 夥伴回饋
+  const mixHTML = parts => parts.map(x =>
+    x.pj ? `<span class="pjsub">${escH(x.t)}</span>` : escH(x.t)).join('');
+  const headSpans = e => {
+    if (isBlankKanji(e.kanji)) {
+      return `<span class="hz pjhz">${escH(e.poj)}</span><span class="dimk">${escH(e.kanji)}</span>`;
+    }
+    const mix = mixKanjiParts(e.kanji, e.poj);
+    const hz = mix ? mixHTML(mix) : escH(e.kanji_disp || e.kanji);
+    return `<span class="hz">${hz}</span><span class="pj">${escH(e.poj)}</span>`;
+  };
+
   const rowHTML = (e, m) => {
     const skel = e.status === 'skeleton';
     return `<a class="row${m.other ? ' othertone' : ''}" href="entry.html?id=${encodeURIComponent(e.id)}">` +
-      `<span class="hz">${escH(e.kanji)}</span>` +
+      headSpans(e) +
       `<span class="kn">${escH(e.kana)}</span>` +
-      `<span class="pj">${escH(e.poj)}</span>` +
       (e.form ? `<span class="badge form">${escH(e.form)}</span>` : '') +
       (m.other ? '<span class="badge other">異調</span>' : '') +
       (skel ? '<span class="badge skel">內容建置中</span>'
@@ -375,9 +409,8 @@ if (typeof document !== 'undefined') {
     const snipHTML = escH(sn.pre) +
       (sn.hit ? `<mark>${escH(sn.hit)}</mark>` : '') + escH(sn.post);
     return `<a class="row crow" href="entry.html?id=${encodeURIComponent(e.id)}">` +
-      `<span class="hz">${escH(e.kanji)}</span>` +
+      headSpans(e) +
       `<span class="kn">${escH(e.kana)}</span>` +
-      `<span class="pj">${escH(e.poj)}</span>` +
       (hit.sig ? `<span class="badge form">${escH(hit.sig)}</span>` : '') +
       `<span class="badge fld">${escH(contentBadge(hit.field, hit.tag))}</span>` +
       `<span class="eid">${escH(e.id)}</span>` +
@@ -625,7 +658,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.__searchTest = { canonTok: canonTok, canonToks: canonToks, tokMatch: tokMatch,
                               seqMatch: seqMatch, parseIdQuery: parseIdQuery,
                               buildQueryCtx: buildQueryCtx, matchEntry: matchEntry,
-                              stripDia: stripDia,
+                              stripDia: stripDia, isBlankKanji: isBlankKanji, mixKanjiParts: mixKanjiParts,
                               parseFormQuery: parseFormQuery, expandIterK: expandIterK,
                               formMatch: formMatch, contentWeight: contentWeight,
                               contentBadge: contentBadge, contentScan: contentScan,

@@ -16,6 +16,30 @@ function esc(s) {
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+// 全 □（殘字）表頭：主位改顯 POJ（2026-07-12 夥伴回饋；與 app.js 同規）
+function isBlankKanji(s) {
+  s = String(s || '');
+  let blank = false;
+  for (const ch of s) {
+    if (ch === '□') { blank = true; continue; }
+    if (ch === '々') continue;
+    return false;
+  }
+  return blank;
+}
+
+// 混合缺字：□ 逐位以對應 POJ 音節取代（□□哭 → āuⁿ āuⁿ 哭）；kanji_units＝IDS 感知字位
+function mixKanjiParts(units, poj) {
+  if (!units || units.indexOf('□') < 0) return null;
+  if (units.every(u => u === '□' || u === '々')) return null;
+  const syls = String(poj || '').split(/-+/).filter(Boolean);
+  if (!syls.length || syls.length !== units.length) return null;
+  return units.map((u, i) => u === '□' ? { t: syls[i], pj: true } : { t: u, pj: false });
+}
+function mixHTML(parts) {
+  return parts.map(x => x.pj ? `<span class="pjsub">${esc(x.t)}</span>` : esc(x.t)).join('');
+}
+
 // ── ruby 渲染 ───────────────────────────────────────────
 function annBox(cls, attr, base, ann) {
   return `<span class="rb ${cls}"${attr}><span class="ann">${ann}</span>${base}</span>`;
@@ -44,19 +68,36 @@ function rubyModern(unit) {
   if (r.star) attr = ` title="採校訂值（見原冊區＊註）"`;
   else if (r.uncertain) attr = ` title="原書調記留空，調待考"`;
   const cls = 'poj' + (r.uncertain ? ' unc' : '') + (r.star ? ' ed' : '');
-  return annBox(cls, attr, esc(unit.u), rt);
+  // 缺字底字：□→POJ 音節（ruby 照印保留；原冊視圖 rubyOrig 不動）
+  const base = unit.u === '□' ? `<span class="pjsub">${esc(r.poj)}</span>` : esc(unit.u);
+  return annBox(cls, attr, base, rt);
 }
 
 function unitsHTML(units, modern) {
-  return (units || []).map(u => modern ? rubyModern(u) : rubyOrig(u)).join('');
+  const parts = [];
+  for (const u of units || []) {
+    let h = modern ? rubyModern(u) : rubyOrig(u);
+    if (u.ref) {                           // 註／日釋內參照連結（2026-07-12 夥伴回饋；兩區共標）
+      if (parts.length && parts[parts.length - 1] === 'ー') {
+        h = parts.pop() + h;               // 前一個裸 ー 併入連結
+      }
+      h = `<a class="reflink" href="entry.html?id=${encodeURIComponent(u.ref)}" title="前往參照條目">${h}</a>`;
+    }
+    parts.push(h);
+  }
+  return parts.join('');
 }
 
 function zhHTML(zh, units) {
   // 中譯內台文引用：zh_units 有 poj 的段落渲染 POJ ruby（export parse_zh 產）
+  // 帶 ref＝可解析的參照詞 → 超連結（2026-07-12 夥伴回饋）
   if (!units) return esc(zh);
-  return units.map(u => u.poj != null
-    ? annBox('poj', '', esc(u.t), esc(u.poj))
-    : esc(u.t)).join('');
+  return units.map(u => {
+    if (u.poj == null) return esc(u.t);
+    let h = annBox('poj', '', esc(u.t), esc(u.poj));
+    if (u.ref) h = `<a class="reflink" href="entry.html?id=${encodeURIComponent(u.ref)}" title="前往參照條目">${h}</a>`;
+    return h;
+  }).join('');
 }
 
 function twModernHTML(items) {
@@ -66,7 +107,9 @@ function twModernHTML(items) {
     let attr = it.fromHead ? ' title="由標頭字補回（原書作ー）"' : '';
     if (it.star) attr = ' title="採校訂值（見原冊區＊註）"';
     if (it.uncertain && !attr) attr = ' title="原書調記留空，調待考"';
-    return annBox(cls, attr, esc(it.u), esc(it.poj) + (it.star ? '*' : ''));
+    // 缺字底字：□→POJ 音節（ruby 照印保留；2026-07-12 夥伴回饋補充）
+    const base = it.u === '□' ? `<span class="pjsub">${esc(it.poj)}</span>` : esc(it.u);
+    return annBox(cls, attr, base, esc(it.poj) + (it.star ? '*' : ''));
   }).join('');
 }
 
@@ -189,7 +232,11 @@ function senseHTML(s, i, total, modern, zhStatus, e) {
 
 function refLineInner(r, ri, modern) {
   const units = modern ? r.kanji_modern : r.kanji;
-  const body = `＝〔${unitsHTML(units, modern)}〕`;   // 照印呈現（2026-07-09 fid=3 裁決）
+  let inner = `〔${unitsHTML(units, modern)}〕`;
+  if (r.target) {                          // 參照超連結（2026-07-12 夥伴回饋；查無目標不連）
+    inner = `<a class="reflink" href="entry.html?id=${encodeURIComponent(r.target)}" title="前往參照條目">${inner}</a>`;
+  }
+  const body = `＝${inner}`;               // 照印呈現（2026-07-09 fid=3 裁決）
   let nt = '';
   if (modern && r.note_zh) {                         // 參照註中譯（2026-07-09 fid=5 裁決）
     nt = `<span class="src">（${zhHTML(r.note_zh, r.note_zh_units)}）</span>`;
@@ -248,10 +295,16 @@ function headBar(e) {
   const proofChip = LOCAL ? '<span class="chip proof" title="localhost 校對模式：雙擊任何文字段可回報修正">校對模式</span>' : '';
   const skelChip = e.status === 'skeleton'
     ? '<span class="chip skel" title="表頭為機器辨識初稿，尚未精校">建置中</span>' : '';
+  const blank = isBlankKanji(h.kanji);   // □ 表頭：POJ 主位、□ 退次要（2026-07-12）
+  const hzAttrs = `${editAttr('head')}${origAttr(h.kanji + '｜' + kanaTxt + '｜' + h.poj, '')}`;
+  const mix = blank ? null : mixKanjiParts(h.kanji_units, h.poj);
+  const hzHTML = blank
+    ? `<span class="hz pjhz"${hzAttrs}>${esc(h.poj)}${unc}</span><span class="dimk">${esc(h.kanji)}</span>`
+    : `<span class="hz"${hzAttrs}>${mix ? mixHTML(mix) : esc(h.kanji_disp || h.kanji)}</span>`;
   return `<section class="card"><div class="entryhead">
-    <span class="hz"${editAttr('head')}${origAttr(h.kanji + '｜' + kanaTxt + '｜' + h.poj, '')}>${esc(h.kanji_disp || h.kanji)}</span>${kanjiNote}
-    <span class="kn">${headKanaHTML(h)}</span>
-    <span class="pj">${esc(h.poj)}${unc}</span>${skelChip}${proofChip}
+    ${hzHTML}${kanjiNote}
+    ${blank ? '' : `<span class="pj">${esc(h.poj)}${unc}</span>`}
+    <span class="kn">${headKanaHTML(h)}</span>${skelChip}${proofChip}
     <button class="reportbtn hd" data-block="表頭">回報錯誤</button>
     <span class="loc">${esc(locText(e))}</span>
     ${navHTML(e)}
@@ -383,7 +436,11 @@ async function init() {
     return;
   }
   entryId = e.id;
-  document.title = `${e.head.kanji}（${e.head.poj}）・台日新辭書線上版`;
+  const tmix = isBlankKanji(e.head.kanji) ? null
+    : mixKanjiParts(e.head.kanji_units, e.head.poj);
+  document.title = isBlankKanji(e.head.kanji)
+    ? `${e.head.poj}・台日新辭書線上版`
+    : `${tmix ? tmix.map(x => x.t).join(' ') : e.head.kanji}（${e.head.poj}）・台日新辭書線上版`;
   if (LOCAL) document.body.classList.add('proof');
   let html = headBar(e);
   if (e.status === 'skeleton') {

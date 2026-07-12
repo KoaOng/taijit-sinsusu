@@ -76,8 +76,8 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px 16px 60px; }
 }
 .results a.row:hover { background: #f6f0e2; text-decoration: none; }
 .results .hz { font-size: 24px; font-weight: 700; min-width: 70px; }
-.results .kn { font-size: 16px; color: var(--sub); }
-.results .pj { font-size: 16px; color: var(--accent); font-style: italic; }
+.results .kn { font-size: 13px; color: var(--sub); }
+.results .pj { font-size: 18px; color: var(--accent); font-style: italic; }
 .results .sm {
   flex: 1 1 100%; font-size: 14px; color: var(--sub);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -91,14 +91,17 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px 16px 60px; }
 /* ── 詳細頁 ── */
 .entryhead { display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; }
 .entryhead .hz { font-size: 42px; font-weight: 700; }
-.entryhead .kn { font-size: 22px; color: var(--sub); }
-.entryhead .pj { font-size: 22px; color: var(--accent); font-style: italic; }
+.entryhead .kn { font-size: 16px; color: var(--sub); }
+.entryhead .pj { font-size: 26px; color: var(--accent); font-style: italic; }
 .entryhead .loc { font-size: 13px; color: var(--sub); margin-left: auto; }
 
 .twocol { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; }
 .imgcard .strips {
-  display: flex; flex-direction: row-reverse; justify-content: flex-end;
+  /* 2026-07-12：direction:rtl＝原生右起捲動（欄1 在右先入眼、往左滑續讀），
+     取代 row-reverse（行動瀏覽器對 row-reverse 溢出不給捲）。DOM 維持欄序。 */
+  display: flex; flex-direction: row; direction: rtl; justify-content: flex-start;
   gap: 8px; overflow-x: auto; padding: 4px 2px;
+  -webkit-overflow-scrolling: touch;
 }
 .imgcard .strips img {
   background: #fff; border: 1px solid var(--line); border-radius: 4px;
@@ -277,7 +280,8 @@ body.proof [data-edit]:hover { outline: 1px dashed var(--badge); outline-offset:
   padding: 14px 4px 5px;
 }
 .results a.row.crow .hz { font-size: 19px; min-width: 56px; }
-.results a.row.crow .kn, .results a.row.crow .pj { font-size: 14px; }
+.results a.row.crow .pj { font-size: 14px; }
+.results a.row.crow .kn { font-size: 12px; }
 .results .sm.snip { white-space: normal; }
 .results .sm.snip mark {
   background: #f2dfa8; color: inherit; padding: 0 1px; border-radius: 2px;
@@ -288,3 +292,13 @@ body.proof [data-edit]:hover { outline: 1px dashed var(--badge); outline-offset:
 /* 2026-07-11 校對回饋：sense 註/參照內嵌於日釋行（原 noteline/refline 區塊型保留給殘餘用途） */
 .notein { font-size: 16px; color: var(--sub); margin-left: .45em; }
 .refin { font-size: 19px; margin-left: .45em; }
+
+/* ── 2026-07-12 夥伴回饋：POJ 主位（□ 表頭）／參照連結 ── */
+.pjhz { color: var(--accent); font-style: italic; }
+.dimk { font-size: 14px; color: #a09484; }
+.entryhead .dimk { font-size: 20px; }
+a.reflink { color: inherit; border-bottom: 1px dashed var(--accent); }
+a.reflink:hover { background: #f6f0e2; text-decoration: none; }
+/* 混合缺字：□ 位以 POJ 音節取代（表頭／現代化底字）；字級縮以對齊漢字視高 */
+.pjsub { color: var(--accent); font-style: italic; font-size: .72em; margin: 0 .1em; }
+.rb .pjsub { font-size: .8em; margin: 0 .04em; }
