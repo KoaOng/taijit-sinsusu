@@ -302,3 +302,8 @@ a.reflink:hover { background: #f6f0e2; text-decoration: none; }
 /* 混合缺字：□ 位以 POJ 音節取代（表頭／現代化底字）；字級縮以對齊漢字視高 */
 .pjsub { color: var(--accent); font-style: italic; font-size: .72em; margin: 0 .1em; }
 .rb .pjsub { font-size: .8em; margin: 0 .04em; }
+
+.ednote{font-size:.82em;color:#555;margin-top:.7em;padding-top:.45em;border-top:1px dotted #cfc6b4;line-height:1.5}
+.ednote b{color:#8a5a2b}
+
+.ellip{vertical-align:.22em;font-size:.94em}

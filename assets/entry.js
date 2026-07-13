@@ -11,6 +11,11 @@ const LOCAL = (location.hostname === '127.0.0.1' || location.hostname === 'local
 const R2_BASE = 'https://pub-71b2d9166d2e4a9aa42c76a5f89a94a2.r2.dev/';
 const IMG_BASE = (LOCAL || !R2_BASE) ? 'img/' : R2_BASE;
 
+function ellipCenter(s) {
+  // fid14（2026-07-13 裁決）：U+2026「…」為文學/一般文本正字（非 ⋯ 數學符號），依中文排版慣例顯示置中；
+  // 僅顯示層以 .ellip 上抬，底本字元不動。輸入須為已 esc 之字串（… 非 HTML 特殊字元，安全）。
+  return s.indexOf('\u2026') < 0 ? s : s.replace(/\u2026+/g, m => `<span class="ellip">${m}</span>`);
+}
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -46,7 +51,7 @@ function annBox(cls, attr, base, ann) {
 }
 
 function rubyOrig(unit) {
-  if (!unit.r) return esc(unit.u);
+  if (!unit.r) return ellipCenter(esc(unit.u));
   const r = unit.r;
   let rt = esc(r.k) + (r.tn ? `<sup class="tn">${esc(r.tn)}</sup>` : '');
   let cls = r.lang === 'tw' ? 'tw' : 'jp';
@@ -60,7 +65,7 @@ function rubyOrig(unit) {
 }
 
 function rubyModern(unit) {
-  if (!unit.r) return esc(unit.u);
+  if (!unit.r) return ellipCenter(esc(unit.u));
   const r = unit.r;
   if (r.poj == null) return esc(unit.u);      // 日文振假名：現代區不注（待中譯）
   let rt = esc(r.poj) + (r.star ? '*' : '');
@@ -285,12 +290,28 @@ function refsHTML(e, modern) {
   }).join('');
 }
 
+function collectEd(e) {
+  // 收集本條目所有掛 ed 校訂疊加層的 ruby（fid7/13 2026-07-13：夥伴看不懂「*」→原冊區加可見圖例）
+  const out = [];
+  const scan = units => (units || []).forEach(u => { if (u && u.r && u.r.ed) out.push({ u: u.u, ed: u.r.ed }); });
+  (e.senses || []).forEach(s => {
+    scan(s.gloss);
+    (s.notes || []).forEach(n => scan(n.units));
+    (s.examples || []).forEach(x => { scan(x.tw); scan(x.jp); });
+  });
+  (e.refs || []).forEach(r => scan(r.kanji));
+  return out;
+}
 function blockOriginal(e) {
   const total = (e.senses || []).length;
   const senses = (e.senses || []).map((s, i) => senseHTML(s, i, total, false, e.zh_status, e)).join('');
+  const eds = collectEd(e);
+  const edLegend = eds.length
+    ? `<div class="ednote"><b>＊</b>＝校訂註（底本照印存真，另記有依據之音理校訂）：${eds.map(x => `${esc(x.u)}〔${esc(x.ed.note || x.ed.corr)}〕`).join('；')}</div>`
+    : '';
   return `<section class="card" data-blockname="原冊數位化">
     <h2>原冊數位化（照印）<button class="reportbtn" data-block="原冊數位化">回報錯誤</button></h2>
-    ${senses}${refsHTML(e, false)}
+    ${senses}${refsHTML(e, false)}${edLegend}
   </section>`;
 }
 
