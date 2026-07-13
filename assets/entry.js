@@ -232,12 +232,30 @@ function senseHTML(s, i, total, modern, zhStatus, e) {
   return `<div class="sense">${mk ? `<span class="marker">${esc(mk)}</span>` : ''}${gloss}${notes}${inrefs}${exs}</div>`;
 }
 
+function refUnitsModernHTML(units) {
+  // fid9（2026-07-13 裁決）：參照現代化 POJ 疊字補連字號。□ 缺字底字＝裸 POJ；
+  // 連續 tw-POJ □ 之間於底字尾插連字號（aⁿ-aⁿ），真漢字底字不動。
+  const arr = units || [];
+  const isBP = u => u.u === '\u25a1' && u.r && u.r.poj != null && (u.r.lang === 'tw' || u.r.lang == null);
+  return arr.map((u, i) => {
+    if (isBP(u) && i + 1 < arr.length && isBP(arr[i + 1])) {
+      const r = u.r;
+      const rt = esc(r.poj) + (r.star ? '*' : '');
+      const attr = r.star ? ' title="\u63a1\u6821\u8a02\u503c\uff08\u898b\u539f\u518a\u5340\uff0a\u8a3b\uff09"' : (r.uncertain ? ' title="\u539f\u66f8\u8abf\u8a18\u7559\u7a7a\uff0c\u8abf\u5f85\u8003"' : '');
+      const cls = 'poj' + (r.uncertain ? ' unc' : '') + (r.star ? ' ed' : '');
+      const base = `<span class="pjsub">${esc(r.poj)}-</span>`;
+      return annBox(cls, attr, base, rt);
+    }
+    return rubyModern(u);
+  }).join('');
+}
+
 function refLineInner(r, ri, modern) {
   const units = modern ? r.kanji_modern : r.kanji;
   // 參照註三型位置（批次二 2026-07-12 J-B2-5／R04·R11 裁決）：in＝括弧內（百）、before＝槽前（閑）、after＝槽後（攬々）
   const noteHTML = (modern && r.note_zh) ? zhHTML(r.note_zh, r.note_zh_units)
                  : (r.note ? esc(r.note) : '');
-  let inner = `〔${unitsHTML(units, modern)}${(noteHTML && r.note_pos === 'in') ? `<span class="src">${noteHTML}</span>` : ''}〕`;
+  let inner = `〔${modern ? refUnitsModernHTML(units) : unitsHTML(units, false)}${(noteHTML && r.note_pos === 'in') ? `<span class="src">${noteHTML}</span>` : ''}〕`;
   if (r.target) {                          // 參照超連結（2026-07-12 夥伴回饋；查無目標不連）
     inner = `<a class="reflink" href="entry.html?id=${encodeURIComponent(r.target)}" title="前往參照條目">${inner}</a>`;
   }
