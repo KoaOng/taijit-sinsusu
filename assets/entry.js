@@ -21,6 +21,14 @@ function esc(s) {
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+// 組字式（IDS）判定：⿰⿱⿸… 起首＝原書合字無碼位（J50 D5 2026-07-14 夥伴回饋 fid18/20）
+function isIdsUnit(s) {
+  s = String(s || '');
+  if (s.length < 2) return false;
+  const c = s.codePointAt(0);
+  return c >= 0x2FF0 && c <= 0x2FFF;
+}
+
 // 全 □（殘字）表頭：主位改顯 POJ（2026-07-12 夥伴回饋；與 app.js 同規）
 function isBlankKanji(s) {
   s = String(s || '');
@@ -58,7 +66,7 @@ function rubyOrig(unit) {
   let attr = '';
   if (r.ed) {
     rt += '*';
-    attr = ` title="校訂：${esc(r.ed.corr)}｜${esc(r.ed.note)}"`;
+    attr = ` title="校訂：${r.ed.corr ? esc(r.ed.corr) + '｜' : ''}${esc(r.ed.note)}"`;
     cls += ' ed';
   }
   return annBox(cls, attr, esc(unit.u), rt);
@@ -73,8 +81,8 @@ function rubyModern(unit) {
   if (r.star) attr = ` title="採校訂值（見原冊區＊註）"`;
   else if (r.uncertain) attr = ` title="原書調記留空，調待考"`;
   const cls = 'poj' + (r.uncertain ? ' unc' : '') + (r.star ? ' ed' : '');
-  // 缺字底字：□→POJ 音節（ruby 照印保留；原冊視圖 rubyOrig 不動）
-  const base = unit.u === '□' ? `<span class="pjsub">${esc(r.poj)}</span>` : esc(unit.u);
+  // 缺字底字：□／IDS 合字→POJ 音節（ruby 照印保留；原冊視圖 rubyOrig 不動；J50 D5）
+  const base = (unit.u === '□' || isIdsUnit(unit.u)) ? `<span class="pjsub">${esc(r.poj)}</span>` : esc(unit.u);
   return annBox(cls, attr, base, rt);
 }
 
@@ -112,8 +120,8 @@ function twModernHTML(items) {
     let attr = it.fromHead ? ' title="由標頭字補回（原書作ー）"' : '';
     if (it.star) attr = ' title="採校訂值（見原冊區＊註）"';
     if (it.uncertain && !attr) attr = ' title="原書調記留空，調待考"';
-    // 缺字底字：□→POJ 音節（ruby 照印保留；2026-07-12 夥伴回饋補充）
-    const base = it.u === '□' ? `<span class="pjsub">${esc(it.poj)}</span>` : esc(it.u);
+    // 缺字底字：□／IDS 合字→POJ 音節（ruby 照印保留；2026-07-12 夥伴回饋＋J50 D5）
+    const base = (it.u === '□' || isIdsUnit(it.u)) ? `<span class="pjsub">${esc(it.poj)}</span>` : esc(it.u);
     return annBox(cls, attr, base, esc(it.poj) + (it.star ? '*' : ''));
   }).join('');
 }
@@ -300,6 +308,7 @@ function collectEd(e) {
     (s.examples || []).forEach(x => { scan(x.tw); scan(x.jp); });
   });
   (e.refs || []).forEach(r => scan(r.kanji));
+  (((e.head || {}).kana) || []).forEach(t => { if (t && t.ed) out.push({ u: t.k, ed: t.ed }); });  // head ed（J50-2）
   return out;
 }
 function blockOriginal(e) {
@@ -309,9 +318,15 @@ function blockOriginal(e) {
   const edLegend = eds.length
     ? `<div class="ednote"><b>＊</b>＝校訂註（底本照印存真，另記有依據之音理校訂）：${eds.map(x => `${esc(x.u)}〔${esc(x.ed.note || x.ed.corr)}〕`).join('；')}</div>`
     : '';
+  let idsLegend = '';                    // 合字圖例（J50 D5 fid20）：條目含組字式時說明記法
+  try {
+    if (/[\u2FF0-\u2FFF]/.test(JSON.stringify([(e.head || {}).kanji, e.senses]))) {
+      idsLegend = '<div class="ednote">組字式（⿰⿸…起首）＝原書合字無 Unicode 碼位，依部件照印記錄；現代化行以 POJ 音節替代顯示</div>';
+    }
+  } catch (err) { /* noop */ }
   return `<section class="card" data-blockname="原冊數位化">
     <h2>原冊數位化（照印）<button class="reportbtn" data-block="原冊數位化">回報錯誤</button></h2>
-    ${senses}${refsHTML(e, false)}${edLegend}
+    ${senses}${refsHTML(e, false)}${edLegend}${idsLegend}
   </section>`;
 }
 
@@ -351,7 +366,7 @@ function headBar(e) {
     : `<span class="hz"${hzAttrs}>${mix ? mixHTML(mix) : esc(h.kanji_disp || h.kanji)}</span>`;
   return `<section class="card"><div class="entryhead">
     ${hzHTML}${kanjiNote}
-    ${blank ? '' : `<span class="pj">${esc(h.poj)}${unc}</span>`}
+    ${blank ? '' : `<span class="pj"${h.poj_star ? ' title="採校訂值（見原冊區＊註）"' : ''}>${esc(h.poj)}${h.poj_star ? '*' : ''}${unc}</span>`}
     <span class="kn">${headKanaHTML(h)}</span>${skelChip}${proofChip}
     <button class="reportbtn hd" data-block="表頭">回報錯誤</button>
     <span class="loc">${esc(locText(e))}</span>
