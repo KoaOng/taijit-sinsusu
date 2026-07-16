@@ -203,8 +203,7 @@ function senseHTML(s, i, total, modern, zhStatus, e) {
   if (!modern) {
     gloss = `<span class="gloss"${editAttr(base + '.gloss')}${origAttr(textOfUnits(s.gloss), rubyDump(s.gloss, false))}>${unitsHTML(s.gloss, false)}</span>`;
   } else if (s.zh) {
-    const tag = zhStatus === 'reviewed' ? '' : ' <span class="chip">機器翻譯・待審核</span>';
-    gloss = `<span class="zh"${editAttr(base + '.zh')}${origAttr(s.zh, '')}>${zhHTML(s.zh, s.zh_units)}</span>${tag}`;
+    gloss = `<span class="zh"${editAttr(base + '.zh')}${origAttr(s.zh, '')}>${zhHTML(s.zh, s.zh_units)}</span>`;
   } else if ((s.gloss || []).length) {
     gloss = `<span class="pending">中文翻譯建置中——原文暫列：</span>` +
       `<span class="gloss"${editAttr(base + '.gloss_modern')}${origAttr(textOfUnits(s.gloss_modern), rubyDump(s.gloss_modern, true))}>${unitsHTML(s.gloss_modern, true)}</span>`;
