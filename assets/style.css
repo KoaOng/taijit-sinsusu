@@ -260,17 +260,17 @@ body.proof [data-edit]:hover { outline: 1px dashed var(--badge); outline-offset:
 #editbox button.primary { background: var(--bar); color: var(--bar-ink); }
 
 @media (max-width: 900px) {
-  /* 手機：表頭壓 2 列——列1 漢字+POJ+chip+回報、列2 編號靠左＋上一條/下一條靠右（2026-07-17） */
+  /* 手機：表頭導覽（68th 補2 站主回饋）——只留箭頭、拉上表頭字同列靠右不自佔一列；
+     編號自成一列。無底色細框同回報鈕量級，padding 保指觸面積；底部 footnav 保留全文不縮。 */
   .entryhead { gap: 10px; }
-  .entryhead .loc { margin-left: 0; }
-  .entryhead .nav { margin-left: auto; }
-  /* 表頭導覽鈕降到與回報鈕同視覺量級（68th 補站主回饋）：無底色細框小字，
-     padding 保住指觸面積；文字含箭頭一看即懂。底部 footnav 不縮。 */
+  .entryhead .nav { margin-left: auto; gap: 6px; align-self: center; }
   .entryhead .navbtn {
-    font-size: 12px; padding: 3px 10px;
-    background: none; color: var(--sub); border-radius: 4px;
+    font-size: 16px; padding: 2px 13px; line-height: 1.5;
+    background: none; color: var(--sub); border-radius: 6px;
   }
+  .entryhead .navbtn .lbl { display: none; }
   .entryhead .navbtn.off { opacity: .4; }
+  .entryhead .loc { order: 99; margin-left: 0; width: 100%; }
   .orighead { font-size: 17px; }
   .orighead .ohz { font-size: 21px; }
 }

@@ -342,12 +342,13 @@ function blockModern(e) {
 }
 
 function navHTML(e) {
+  // .lbl 文字在手機表頭條隱藏＝只留箭頭（68th 補2 站主回饋）；title/aria 保留語意
   const prev = e.prev
-    ? `<a class="navbtn" id="navprev" href="entry.html?id=${encodeURIComponent(e.prev)}">← 上一條</a>`
-    : `<span class="navbtn off">← 上一條</span>`;
+    ? `<a class="navbtn" id="navprev" href="entry.html?id=${encodeURIComponent(e.prev)}" title="上一條（鍵盤 ←）" aria-label="上一條">←<span class="lbl"> 上一條</span></a>`
+    : `<span class="navbtn off">←<span class="lbl"> 上一條</span></span>`;
   const next = e.next
-    ? `<a class="navbtn" id="navnext" href="entry.html?id=${encodeURIComponent(e.next)}">下一條 →</a>`
-    : `<span class="navbtn off">下一條 →</span>`;
+    ? `<a class="navbtn" id="navnext" href="entry.html?id=${encodeURIComponent(e.next)}" title="下一條（鍵盤 →）" aria-label="下一條"><span class="lbl">下一條 </span>→</a>`
+    : `<span class="navbtn off"><span class="lbl">下一條 </span>→</span>`;
   return `<span class="nav">${prev}${next}</span>`;
 }
 
