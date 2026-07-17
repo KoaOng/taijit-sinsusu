@@ -264,6 +264,13 @@ body.proof [data-edit]:hover { outline: 1px dashed var(--badge); outline-offset:
   .entryhead { gap: 10px; }
   .entryhead .loc { margin-left: 0; }
   .entryhead .nav { margin-left: auto; }
+  /* 表頭導覽鈕降到與回報鈕同視覺量級（68th 補站主回饋）：無底色細框小字，
+     padding 保住指觸面積；文字含箭頭一看即懂。底部 footnav 不縮。 */
+  .entryhead .navbtn {
+    font-size: 12px; padding: 3px 10px;
+    background: none; color: var(--sub); border-radius: 4px;
+  }
+  .entryhead .navbtn.off { opacity: .4; }
   .orighead { font-size: 17px; }
   .orighead .ohz { font-size: 21px; }
 }
