@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>關於・台日新辭書線上版</title>
 <link rel="stylesheet" href="assets/style.css">
+<link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
 <header class="top">
-  <a class="title" href="index.html">台日新辭書線上版</a>
+  <a class="title" href="index.html"><img class="sitelogo" src="assets/logo.png" alt="做工仔人台語工作室">台日新辭書線上版</a>
   <nav><a href="index.html">搜尋</a><a href="revisions.html">修訂紀錄</a><a href="about.html">關於</a></nav>
 </header>
 <main>
@@ -21,7 +22,7 @@
   </section>
   <section class="card">
     <h2>關於本站</h2>
-    <p>本站將原冊逐條數位化，每條目提供三層內容：<strong>現代化對照</strong>（假名注音轉寫為白話字 POJ、用例破折號補回標頭字、日文釋義譯為中文）、
+    <p>本站將原冊逐條數位化，每條目提供三層內容：<strong>POJ＋日文中譯</strong>（假名注音轉寫為白話字 POJ、用例破折號補回標頭字、日文釋義譯為中文）、
     <strong>原冊數位化</strong>（漢字、假名、聲調、振假名照原書字面轉寫，殘字以 □、重複記號以 々〳〵 照印）、
     <strong>原冊書影</strong>（條目在原書中的切圖）。
     轉寫經多通道機器驗證與人工精校；標示「內容建置中」之條目為尚未完成精校的骨架資料。</p>
@@ -38,21 +39,34 @@
     內文結果分組列於詞目結果之後，並標示命中欄位與前後文摘錄。</p>
     <p><strong>疊詞形式搜尋</strong>：搜尋框下方的詞形按鈕（AA、AAB、ABB、AABB…）可篩選特定構詞形式的條目；
     點選後輸入單一漢字或 POJ 音節即過濾（例如選 AAB 再輸入 kiò），不輸入字則瀏覽該形式全部條目。
-    形式判定以白話字音節為準（去聲調比對，疊詞變調不影響判定）。也支援語法輸入，如 <code>form:AAB 呌</code>。
+    形式判定以白話字音節為準，並比對聲調——調號不同即視為不同語素（本辭書疊詞印面以本調書寫）。
+    也支援語法輸入，如 <code>form:AAB 呌</code>。
     例句中的疊詞也一併收錄：完全疊型（AA、AABB、ABAB）直接偵測，其餘形式以收錄詞目在例句中的出現為準，
     列於「內文符合」組並標示形式與片段；按鈕上的數字＝條目與例句合計。</p>
   </section>
   <section class="card">
-    <h2>資料來源與致謝</h2>
+    <h2>製作團隊</h2>
+    <img class="about-logo" src="assets/logo.png" alt="做工仔人台語工作室 logo">
+    <p>本站由<strong>做工仔人台語工作室</strong>製作維護。工作室成立於 2023 年，
+    用廣播劇、有聲故事、台語辭典守護台語——咱ê話，是這粒島嶼本底ê共同語。</p>
+    <p>工作室網站：<a href="https://cho-kang-a-lang.github.io/" target="_blank" rel="noopener">cho-kang-a-lang.github.io</a><br>
+    YouTube 頻道：<a href="https://www.youtube.com/@chokangalang" target="_blank" rel="noopener">youtube.com/@chokangalang</a></p>
+  </section>
+  <section class="card">
+    <h2>資料來源、致謝與版權</h2>
     <p>原冊掃描圖檔取自
     <a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>
     （進入後於站內搜尋「臺日新辭書」即可瀏覽原書），特此致謝。</p>
     <p>《臺日新辭書》著作權存續期間已屆滿，屬公有領域；本站數位化轉寫內容以照印存真為原則。</p>
+    <p>本站之數位化轉寫、中文翻譯、網站程式與版面設計為做工仔人台語工作室之著作，
+    © 2026 做工仔人台語工作室，保留所有權利；引用或轉載請先與工作室聯繫。</p>
   </section>
 </main>
 <footer class="site">
   《臺日新辭書》東方孝義（1889–1957）著，臺灣警察協會 1931 年出版，著作權存續期間已屆滿（公有領域）。
-  原冊圖檔來源：<a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>。
+  原冊圖檔來源：<a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>。<br>
+  本站之數位化轉寫、中文翻譯與網站設計 © 2026
+  <a href="https://cho-kang-a-lang.github.io/" target="_blank" rel="noopener">做工仔人台語工作室</a>，保留所有權利。
 </footer>
 <script>
 fetch('data/meta.json').then(r => r.json()).then(m => {

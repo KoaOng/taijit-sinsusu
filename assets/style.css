@@ -89,11 +89,23 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px 16px 60px; }
 .badge.skel { background: #a09484; }
 
 /* ── 詳細頁 ── */
-.entryhead { display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; }
+/* 2026-07-17 版面改版：表頭條融入第一卡（不再獨立成卡），假名移原冊區 orighead */
+.entryhead { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; margin-bottom: 10px; }
 .entryhead .hz { font-size: 42px; font-weight: 700; }
 .entryhead .kn { font-size: 16px; color: var(--sub); }
 .entryhead .pj { font-size: 26px; color: var(--accent); font-style: italic; }
 .entryhead .loc { font-size: 13px; color: var(--sub); margin-left: auto; }
+
+/* 原冊數位化表頭：假名見出し（調記）＋【漢字】仿原冊；□ 照印方格 */
+.orighead {
+  display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap;
+  font-size: 20px; margin: 2px 0 12px; padding-bottom: 8px;
+  border-bottom: 1px dotted var(--line);
+}
+.orighead .okn { letter-spacing: .08em; }
+.orighead .okn sup.tn { font-size: 11px; }
+.orighead .ohz { font-size: 25px; font-weight: 700; }
+.skelnote { margin: 4px 0 0; }
 
 .twocol { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; }
 .imgcard .strips {
@@ -248,7 +260,12 @@ body.proof [data-edit]:hover { outline: 1px dashed var(--badge); outline-offset:
 #editbox button.primary { background: var(--bar); color: var(--bar-ink); }
 
 @media (max-width: 900px) {
-  .entryhead .nav { margin-left: 0; width: 100%; justify-content: space-between; }
+  /* 手機：表頭壓 2 列——列1 漢字+POJ+chip+回報、列2 編號靠左＋上一條/下一條靠右（2026-07-17） */
+  .entryhead { gap: 10px; }
+  .entryhead .loc { margin-left: 0; }
+  .entryhead .nav { margin-left: auto; }
+  .orighead { font-size: 17px; }
+  .orighead .ohz { font-size: 21px; }
 }
 
 #reportbox input[type=text] {
@@ -307,3 +324,13 @@ a.reflink:hover { background: #f6f0e2; text-decoration: none; }
 .ednote b{color:#8a5a2b}
 
 .ellip{vertical-align:.22em;font-size:.94em}
+
+/* ── 2026-07-17：工作室 logo（頁首）＋搜尋列回報鈕 ── */
+.sitelogo {
+  height: 26px; width: auto; vertical-align: -7px;
+  margin-right: 9px; border-radius: 6px;
+}
+header.top .title { display: inline-flex; align-items: center; }
+header.top .title .sitelogo { vertical-align: baseline; }
+.results .reportbtn.rowreport { float: none; margin-left: 6px; }
+.about-logo { height: 72px; width: auto; border-radius: 10px; float: right; margin: 0 0 8px 12px; }

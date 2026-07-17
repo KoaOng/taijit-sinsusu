@@ -6,10 +6,11 @@
 <title>台日新辭書線上版・搜尋</title>
 <meta name="description" content="《臺日新辭書》（東方孝義，1931）數位化線上辭典：漢字、白話字（POJ）、假名檢索，原冊書影對照。">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
 <header class="top">
-  <a class="title" href="index.html">台日新辭書線上版</a>
+  <a class="title" href="index.html"><img class="sitelogo" src="assets/logo.png" alt="做工仔人台語工作室">台日新辭書線上版</a>
   <nav><a href="index.html">搜尋</a><a href="revisions.html">修訂紀錄</a><a href="about.html">關於</a></nav>
 </header>
 <main>
@@ -29,8 +30,24 @@
 </main>
 <footer class="site">
   《臺日新辭書》東方孝義（1889–1957）著，臺灣警察協會 1931 年出版，著作權存續期間已屆滿（公有領域）。
-  原冊圖檔來源：<a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>。
+  原冊圖檔來源：<a href="https://das.nlpi.edu.tw/" target="_blank" rel="noopener">國立公共資訊圖書館 數位典藏服務網</a>。<br>
+  本站之數位化轉寫、中文翻譯與網站設計 © 2026
+  <a href="https://cho-kang-a-lang.github.io/" target="_blank" rel="noopener">做工仔人台語工作室</a>，保留所有權利。
 </footer>
+
+<div id="reportbox">
+  <div class="panel">
+    <h2>回報錯誤</h2>
+    <p class="src" id="reportctx"></p>
+    <textarea id="reporttext" placeholder="請描述問題（哪個字、哪個注音／翻譯有誤，正確應為…）"></textarea>
+    <label class="src">暱稱（選填，將會顯示在公開的修訂記錄中）</label>
+    <input id="reportname" type="text" maxlength="60" placeholder="例：阿明">
+    <div class="actions">
+      <button id="reportcancel">取消</button>
+      <button id="reportsend" class="primary">送出回報</button>
+    </div>
+  </div>
+</div>
 <script src="assets/poj_converter.js"></script>
 <script src="assets/app.js"></script>
 </body>

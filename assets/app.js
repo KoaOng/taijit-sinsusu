@@ -397,6 +397,7 @@ if (typeof document !== 'undefined') {
       (skel ? '<span class="badge skel">內容建置中</span>'
             : '<span class="badge">完整</span>') +
       `<span class="eid">${escH(e.id)}</span>` +
+      `<button type="button" class="reportbtn rowreport" data-id="${escH(e.id)}" title="回報這條資料的問題">回報錯誤</button>` +
       (skel || !e.summary ? '' : `<span class="sm">${escH(e.summary)}</span>`) +
       '</a>';
   };
@@ -414,8 +415,50 @@ if (typeof document !== 'undefined') {
       (hit.sig ? `<span class="badge form">${escH(hit.sig)}</span>` : '') +
       `<span class="badge fld">${escH(contentBadge(hit.field, hit.tag))}</span>` +
       `<span class="eid">${escH(e.id)}</span>` +
+      `<button type="button" class="reportbtn rowreport" data-id="${escH(e.id)}" title="回報這條資料的問題">回報錯誤</button>` +
       `<span class="sm snip">${snipHTML}</span>` +
       '</a>';
+  };
+
+  // ── 回報（2026-07-17 站主需求：搜尋頁也要有回報入口；線上直送 /api/feedback、失敗退回複製） ──
+  let reportId = '';
+  const openReport = id => {
+    reportId = id;
+    $q('#reportctx').textContent = `【回報】條目 ${id}／區塊：搜尋列表`;
+    $q('#reporttext').value = '';
+    try { $q('#reportname').value = localStorage.getItem('tjss_reporter') || ''; } catch (e) {}
+    $q('#reportbox').classList.add('on');
+  };
+  const fallbackCopy = async txt => {
+    try {
+      await navigator.clipboard.writeText(txt);
+      alert('線上送出暫時不可用，回報內容已複製——請把這段文字用 LINE 或 Email 傳給站主，謝謝！');
+    } catch (e) {
+      prompt('請手動複製以下回報內容：', txt);
+    }
+  };
+  const sendReport = async () => {
+    const note = $q('#reporttext').value.trim();
+    if (!note) { alert('請先描述問題內容。'); return; }
+    const reporter = $q('#reportname').value.trim();
+    try { localStorage.setItem('tjss_reporter', reporter); } catch (e) {}
+    const rec = { source: 'online', ts: new Date().toISOString(), id: reportId,
+                  block: '搜尋列表', note: note, reporter: reporter };
+    let okd = false;
+    try {
+      const r = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rec),
+      });
+      okd = r.ok && (await r.json()).ok === true;
+    } catch (e) { okd = false; }
+    if (okd) {
+      alert('已送出，感謝回報！');
+    } else {
+      await fallbackCopy(`【回報】條目 ${reportId}／區塊：搜尋列表\n回報者：${reporter}\n說明：${note}`);
+    }
+    $q('#reportbox').classList.remove('on');
   };
 
   const hintLi = (ul, html) => {
@@ -636,12 +679,23 @@ if (typeof document !== 'undefined') {
       });
     });
     $q('#results').addEventListener('click', ev => {
+      const rb = ev.target.closest && ev.target.closest('.rowreport');
+      if (rb) {                              // 回報鈕在 <a> 內：擋導航、開回報框
+        ev.preventDefault();
+        ev.stopPropagation();
+        openReport(rb.dataset.id);
+        return;
+      }
       if (ev.target && ev.target.id === 'cretry') {
         ev.preventDefault();
         CSTATE.status = 'idle';
         loadContent();
       }
     });
+    if ($q('#reportsend')) {
+      $q('#reportsend').addEventListener('click', sendReport);
+      $q('#reportcancel').addEventListener('click', () => $q('#reportbox').classList.remove('on'));
+    }
     const params = new URLSearchParams(location.search);
     if (params.get('form')) FORM = params.get('form').toUpperCase();
     if (params.get('q')) $q('#q').value = params.get('q');

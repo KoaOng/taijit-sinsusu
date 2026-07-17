@@ -325,15 +325,18 @@ function blockOriginal(e) {
   } catch (err) { /* noop */ }
   return `<section class="card" data-blockname="原冊數位化">
     <h2>原冊數位化（照印）<button class="reportbtn" data-block="原冊數位化">回報錯誤</button></h2>
-    ${senses}${refsHTML(e, false)}${edLegend}${idsLegend}
+    ${origHead(e)}${senses}${refsHTML(e, false)}${edLegend}${idsLegend}
   </section>`;
 }
 
 function blockModern(e) {
   const total = (e.senses || []).length;
   const senses = (e.senses || []).map((s, i) => senseHTML(s, i, total, true, e.zh_status, e)).join('');
+  // 2026-07-17 站主裁示：區塊名「現代化對照」5 字自標題拿掉，只留「POJ＋日文中譯」
+  //（data-block／data-blockname 內部值不動，修訂紀錄用語連續）
   return `<section class="card" data-blockname="現代化對照">
-    <h2>現代化對照（POJ＋日文中譯）<button class="reportbtn" data-block="現代化對照">回報錯誤</button></h2>
+    ${headStrip(e, false)}
+    <h2>POJ＋日文中譯<button class="reportbtn" data-block="現代化對照">回報錯誤</button></h2>
     ${senses}${refsHTML(e, true)}
   </section>`;
 }
@@ -348,7 +351,9 @@ function navHTML(e) {
   return `<span class="nav">${prev}${next}</span>`;
 }
 
-function headBar(e) {
+// 表頭條（2026-07-17 版面改版：獨立表頭卡取消，融入第一個內容卡；
+// 完整條目假名移到原冊數位化區 origHead，骨架條目 withKana=true 假名留在此）
+function headStrip(e, withKana) {
   const h = e.head || {};
   const kanjiNote = (h.kanji_notes || []).length
     ? ` <span class="chip" title="${esc(h.kanji_notes.map(n => n.note).join('；'))}">字註</span>` : '';
@@ -363,14 +368,23 @@ function headBar(e) {
   const hzHTML = blank
     ? `<span class="hz pjhz"${hzAttrs}>${esc(h.poj)}${unc}</span><span class="dimk">${esc(h.kanji)}</span>`
     : `<span class="hz"${hzAttrs}>${mix ? mixHTML(mix) : esc(h.kanji_disp || h.kanji)}</span>`;
-  return `<section class="card"><div class="entryhead">
+  return `<div class="entryhead">
     ${hzHTML}${kanjiNote}
     ${blank ? '' : `<span class="pj"${h.poj_star ? ' title="採校訂值（見原冊區＊註）"' : ''}>${esc(h.poj)}${h.poj_star ? '*' : ''}${unc}</span>`}
-    <span class="kn">${headKanaHTML(h)}</span>${skelChip}${proofChip}
+    ${withKana ? `<span class="kn">${headKanaHTML(h)}</span>` : ''}${skelChip}${proofChip}
     <button class="reportbtn hd" data-block="表頭">回報錯誤</button>
     <span class="loc">${esc(locText(e))}</span>
     ${navHTML(e)}
-  </div></section>`;
+  </div>`;
+}
+
+// 原冊數位化區表頭：假名見出し（調記）＋【漢字】——仿原冊樣貌；
+// 無漢字／缺字條目 □ 照印恢復方格，不做 POJ 替代（2026-07-17 版面改版）
+function origHead(e) {
+  const h = e.head || {};
+  const kanaTxt = (h.kana || []).map(t => t.k + (t.tn || '') + (t.sep === '--' ? '--' : t.sep ? ' ' : '')).join('');
+  const attrs = `${editAttr('head')}${origAttr(h.kanji + '｜' + kanaTxt + '｜' + h.poj, '')}`;
+  return `<div class="orighead"${attrs}><span class="okn">${headKanaHTML(h)}</span><span class="ohz">【${esc(h.kanji)}】</span></div>`;
 }
 
 function locText(e) {
@@ -386,10 +400,14 @@ function locText(e) {
   return parts.length ? `${out}（${parts.join('・')}）` : out;
 }
 
-function skeletonNote() {
-  return `<section class="card"><p>本條目<strong>資料建置中</strong>——表頭（漢字・假名・POJ）為機器辨識初稿，
-  尚未精校；日文釋義、用例與現代化對照將於精校完成後上線。
-  下方原冊書影可直接閱讀本條原文；發現表頭錯誤，歡迎按「回報錯誤」告訴我們。</p></section>`;
+function skeletonCard(e) {
+  // 骨架條目：表頭與建置中說明融合單卡（2026-07-17 版面改版；假名留在表頭條）
+  return `<section class="card">
+    ${headStrip(e, true)}
+    <p class="skelnote">本條目<strong>資料建置中</strong>——表頭（漢字・假名・POJ）為機器辨識初稿，
+    尚未精校；日文釋義、用例與現代化對照將於精校完成後上線。
+    下方原冊書影可直接閱讀本條原文；發現表頭錯誤，歡迎按「回報錯誤」告訴我們。</p>
+  </section>`;
 }
 
 // ── 回報（線上直送 /api/feedback；失敗自動退回複製模式） ──
@@ -504,12 +522,14 @@ async function init() {
     ? `${e.head.poj}・台日新辭書線上版`
     : `${tmix ? tmix.map(x => x.t).join(' ') : e.head.kanji}（${e.head.poj}）・台日新辭書線上版`;
   if (LOCAL) document.body.classList.add('proof');
-  let html = headBar(e);
+  // 2026-07-17 版面改版：獨立表頭卡取消——表頭融入第一卡，
+  // 整體＝POJ＋日文中譯（含表頭條）→ 原冊數位化（含原冊表頭）→ 原冊書影
+  let html;
   if (e.status === 'skeleton') {
-    html += skeletonNote() + blockImages(e);   // 骨架：建置中說明＋該條原冊書影（B 版）
+    html = skeletonCard(e) + blockImages(e);   // 骨架：表頭＋建置中說明單卡＋該條原冊書影（B 版）
   } else {
-    html += `<div class="twocol">${blockModern(e)}${blockOriginal(e)}</div>` +
-            blockImages(e);
+    html = `<div class="twocol">${blockModern(e)}${blockOriginal(e)}</div>` +
+           blockImages(e);
   }
   html += `<div class="footnav">${navHTML(e)}</div>`;
   root.innerHTML = html;
