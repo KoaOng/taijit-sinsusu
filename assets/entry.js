@@ -325,7 +325,7 @@ function blockOriginal(e) {
   } catch (err) { /* noop */ }
   return `<section class="card" data-blockname="原冊數位化">
     <h2>原冊數位化（照印）<button class="reportbtn" data-block="原冊數位化">回報錯誤</button></h2>
-    ${origHead(e)}${senses}${refsHTML(e, false)}${edLegend}${idsLegend}
+    ${origHead(e)}${senses}${refsHTML(e, false)}${kanjiNotesHTML(e)}${edLegend}${idsLegend}
   </section>`;
 }
 
@@ -356,8 +356,6 @@ function navHTML(e) {
 // 完整條目假名移到原冊數位化區 origHead，骨架條目 withKana=true 假名留在此）
 function headStrip(e, withKana) {
   const h = e.head || {};
-  const kanjiNote = (h.kanji_notes || []).length
-    ? ` <span class="chip" title="${esc(h.kanji_notes.map(n => n.note).join('；'))}">字註</span>` : '';
   const unc = h.poj_uncertain ? '<span class="unc" title="部分調記原書留空">ˀ</span>' : '';
   const kanaTxt = (h.kana || []).map(t => t.k + (t.tn || '') + (t.sep === '--' ? '--' : t.sep ? ' ' : '')).join('');
   const proofChip = LOCAL ? '<span class="chip proof" title="localhost 校對模式：雙擊任何文字段可回報修正">校對模式</span>' : '';
@@ -370,13 +368,35 @@ function headStrip(e, withKana) {
     ? `<span class="hz pjhz"${hzAttrs}>${esc(h.poj)}${unc}</span><span class="dimk">${esc(h.kanji)}</span>`
     : `<span class="hz"${hzAttrs}>${mix ? mixHTML(mix) : esc(h.kanji_disp || h.kanji)}</span>`;
   return `<div class="entryhead">
-    ${hzHTML}${kanjiNote}
+    ${hzHTML}
     ${blank ? '' : `<span class="pj"${h.poj_star ? ' title="採校訂值（見原冊區＊註）"' : ''}>${esc(h.poj)}${h.poj_star ? '*' : ''}${unc}</span>`}
     ${withKana ? `<span class="kn">${headKanaHTML(h)}</span>` : ''}${skelChip}${proofChip}
     <button class="reportbtn hd" data-block="表頭">回報錯誤</button>
     <span class="loc">${esc(locText(e))}</span>
     ${navHTML(e)}
   </div>`;
+}
+
+// 表頭漢字判讀註記（head.kanji_notes）→ 可見行（68th 補3 站主回饋：
+// 原「字註」chip 只有 hover 提示、手機看不到；改比照校訂註 ednote 明示，
+// 同文註記合併不重複——□□哮 兩筆「殘字」→「□＝殘字」一行）
+function kanjiNotesHTML(e) {
+  const h = e.head || {};
+  const notes = h.kanji_notes || [];
+  if (!notes.length) return '';
+  const units = h.kanji_units || [];
+  const groups = new Map();                    // note 全文 → [字位]
+  for (const n of notes) {
+    const ch = n.char || units[n.pos] || '□';
+    const arr = groups.get(n.note) || [];
+    if (arr.indexOf(ch) < 0) arr.push(ch);
+    groups.set(n.note, arr);
+  }
+  const parts = [];
+  for (const [note, chars] of groups) {
+    parts.push(`${esc(chars.join('、'))}＝${esc(note)}`);
+  }
+  return `<div class="ednote headnote"><b>字註</b>：${parts.join('；')}</div>`;
 }
 
 // 原冊數位化區表頭：假名見出し（調記）＋【漢字】——仿原冊樣貌；
@@ -408,6 +428,7 @@ function skeletonCard(e) {
     <p class="skelnote">本條目<strong>資料建置中</strong>——表頭（漢字・假名・POJ）為機器辨識初稿，
     尚未精校；日文釋義、用例與現代化對照將於精校完成後上線。
     下方原冊書影可直接閱讀本條原文；發現表頭錯誤，歡迎按「回報錯誤」告訴我們。</p>
+    ${kanjiNotesHTML(e)}
   </section>`;
 }
 
