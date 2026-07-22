@@ -1,4 +1,6 @@
 // poj_converter.js — 由 query_demo.html 抽出（單一真相在該檔，改規則請兩邊同步或改為 build 步驟）
+// 2026-07-22: ng聲母＝ガ行假名＋鼻音n 裁決（ギアウ1n=ngiau p0110-1-04、ゴオ2n=ngó͘ p0074/p0103、
+//   ゴオ5n=ngô͘ p0058-2-05；舊 ン+母音 記法廢止，kana→POJ 之 ン+母音 解析保留為歷史輸入防禦層）
 // 提供：parsePoj / pojToKana / kanaToPoj
 const OV = {
   '':   {'a':'ア','i':'イ','u':'ウ','e':'エ','o':'ヲ','oo':'オ','ir':'ウ̄','er':'オ̄'},
@@ -130,15 +132,8 @@ function pojToKana(pojStr) {
 
   if (onset === 'ng' && !vowels.length) parts.push('ン');
   else if (onset === 'ng') {
-    parts.push('ン'); onset = '';
-    let v = firstVowel;
-    if (v === 'o' && (fin==='p'||fin==='k')) v = 'oo';
-    if (v === 'o' && fin === 'ng') v = 'oo';
-    pushOrErr(V_L[v]);
-    middleVowels = vowels.slice(1).map(mv =>
-      (mv==='o' && (fin==='ng'||fin==='p'||fin==='k')) ? 'oo' : mv);
-    for (const mv of middleVowels) pushOrErr(V_L[mv]);
-    firstVowel = null;
+    // ng聲母＝ガ行假名＋鼻音n（2026-07-22 裁決；nasal 已由 NASAL_ONSETS 判定為 true）
+    onset = 'g';
   }
 
   if (firstVowel !== null) {
@@ -325,10 +320,12 @@ function kanaToPoj(kanaStr) {
           }
 
           const useOForOO = (final === 'ng' || final === 'p' || final === 'k');
-          let display = k2pBuild(onset, vowels, final, tone, useOForOO);
-          const ascii = k2pBuildAscii(onset, vowels, final, tone, nasal, useOForOO);
-          if (nasal && !NASAL_ONSETS.includes(onset)) display += 'ⁿ';
-          candidates.push({display, ascii, onset, vowels, final});
+          // ガ行假名＋鼻音n → ng聲母（2026-07-22 裁決；g 的鼻音化即 ng，POJ 不寫 ⁿ）
+          const effOnset = (nasal && onset === 'g') ? 'ng' : onset;
+          let display = k2pBuild(effOnset, vowels, final, tone, useOForOO);
+          const ascii = k2pBuildAscii(effOnset, vowels, final, tone, nasal, useOForOO);
+          if (nasal && !NASAL_ONSETS.includes(effOnset)) display += 'ⁿ';
+          candidates.push({display, ascii, onset: effOnset, vowels, final});
         }
       }
     }
