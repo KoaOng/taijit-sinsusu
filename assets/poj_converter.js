@@ -268,6 +268,7 @@ function k2pBuildAscii(onset, vowels, final, tone, nasal, useOForOO) {
 function kanaToPoj(kanaStr) {
   let s = (kanaStr || '').trim();
   s = s.replace(/ゥ/g, 'ウ').replace(/ぅ/g, 'う'); // J28-1 長音第二拍小字正規化（HR004 補條款 2026-07-10）
+  s = s.replace(/ヰ/g, 'イ').replace(/ゐ/g, 'い'); // ヰ 照印入資料、轉換視同イ（2026-07-22 裁決）
   if (!s) return [];
   let tone = 1, nasal = false;
   if (s.endsWith('n')) { nasal = true; s = s.slice(0, -1); }
@@ -319,6 +320,8 @@ function kanaToPoj(kanaStr) {
             vowels = ['i','a'];  // POJ 同化: iet→iat, ien→ian, iem→iam, iep→iap
           }
 
+          // 音理防呆：三連同母音非法（POJ 無 iii 類韻核；2026-07-22，怎 チヰイ2n 案）
+          if (vowels.some((v, i) => i >= 2 && v === vowels[i-1] && v === vowels[i-2])) continue;
           const useOForOO = (final === 'ng' || final === 'p' || final === 'k');
           // ガ行假名＋鼻音n → ng聲母（2026-07-22 裁決；g 的鼻音化即 ng，POJ 不寫 ⁿ）
           const effOnset = (nasal && onset === 'g') ? 'ng' : onset;
@@ -363,6 +366,8 @@ function kanaToPoj(kanaStr) {
         const combos = vowelChoices.length ? k2pProduct(vowelChoices) : [[]];
         for (const final of finalCands) {
           for (const vowels of combos) {
+            // 音理防呆：三連同母音非法（同 tryParse；2026-07-22）
+            if (vowels.some((v, i) => i >= 2 && v === vowels[i-1] && v === vowels[i-2])) continue;
             const useOForOO = (final === 'ng' || final === 'p' || final === 'k');
             const display = k2pBuild('ng', vowels, final, tone, useOForOO);
             const ascii = k2pBuildAscii('ng', vowels, final, tone, nasal, useOForOO);
