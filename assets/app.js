@@ -379,12 +379,14 @@ if (typeof document !== 'undefined') {
   const mixHTML = parts => parts.map(x =>
     x.pj ? `<span class="pjsub">${escH(x.t)}</span>` : escH(x.t)).join('');
   const headSpans = e => {
+    // 腔口升表頭（2026-07-25 rid 115）：index.dial → POJ 右側淺色（腔）
+    const dial = e.dial ? `<span class="dial">（${escH(e.dial)}）</span>` : '';
     if (isBlankKanji(e.kanji)) {
-      return `<span class="hz pjhz">${escH(e.poj)}</span><span class="dimk">${escH(e.kanji)}</span>`;
+      return `<span class="hz pjhz">${escH(e.poj)}</span>${dial}<span class="dimk">${escH(e.kanji)}</span>`;
     }
     const mix = mixKanjiParts(e.kanji, e.poj);
     const hz = mix ? mixHTML(mix) : escH(e.kanji_disp || e.kanji);
-    return `<span class="hz">${hz}</span><span class="pj">${escH(e.poj)}</span>`;
+    return `<span class="hz">${hz}</span><span class="pj">${escH(e.poj)}</span>${dial}`;
   };
 
   const rowHTML = (e, m) => {

@@ -345,3 +345,8 @@ header.top .title { display: inline-flex; align-items: center; }
 header.top .title .sitelogo { vertical-align: baseline; }
 .results .reportbtn.rowreport { float: none; margin-left: 6px; }
 .about-logo { height: 72px; width: auto; border-radius: 10px; float: right; margin: 0 0 8px 12px; }
+
+/* 腔口註記（2026-07-25 rid 115）：表頭 POJ 右側淺色小字（漳）（泉）（同安）… */
+.entryhead .dial { font-size: 16px; color: var(--sub); }
+.results .dial { font-size: 13px; color: var(--sub); }
+.results a.row.crow .dial { font-size: 12px; }

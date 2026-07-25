@@ -274,7 +274,8 @@ function refLineInner(r, ri, modern) {
   let body = `＝${inner}`;                 // 照印呈現（2026-07-09 fid=3 裁決）
   let nt = '';
   if (noteHTML && r.note_pos === 'before') {
-    body = `<span class="src">（${noteHTML}）</span>${body}`;
+    // 腔口已升表頭（2026-07-25 rid 115）：現代化視圖不再前綴（腔）；原冊視圖照印不動
+    if (!(modern && r.dial)) body = `<span class="src">（${noteHTML}）</span>${body}`;
   } else if (noteHTML && r.note_pos === 'after') {
     nt = `<span class="src">（${noteHTML}）。</span>`;
   } else if (noteHTML && r.note_pos !== 'in') {
@@ -370,6 +371,7 @@ function headStrip(e, withKana) {
   return `<div class="entryhead">
     ${hzHTML}
     ${blank ? '' : `<span class="pj"${h.poj_star ? ' title="採校訂值（見原冊區＊註）"' : ''}>${esc(h.poj)}${h.poj_star ? '*' : ''}${unc}</span>`}
+    ${h.dial ? `<span class="dial" title="腔口註記：原冊印於釋義處（照印見原冊數位化區）">（${esc(h.dial)}）</span>` : ''}
     ${withKana ? `<span class="kn">${headKanaHTML(h)}</span>` : ''}${skelChip}${proofChip}
     <button class="reportbtn hd" data-block="表頭">回報錯誤</button>
     <span class="loc">${esc(locText(e))}</span>

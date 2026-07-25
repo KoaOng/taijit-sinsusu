@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <style>
   .revtable-wrap { overflow-x: auto; }
-  table.revtable { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 720px; }
+  table.revtable { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 900px; }
   table.revtable th, table.revtable td {
     border-bottom: 1px solid var(--line); padding: 8px 10px;
     text-align: left; vertical-align: top;
@@ -19,6 +19,7 @@
   }
   table.revtable td.nowrap { white-space: nowrap; }
   table.revtable .issue { color: var(--accent); }
+  table.revtable .ai { color: var(--sub); }
   .actchip {
     font-size: 12px; color: #fff; background: var(--badge);
     border-radius: 4px; padding: 1px 8px; white-space: nowrap;
@@ -38,7 +39,7 @@
     <div class="revtable-wrap">
       <table class="revtable">
         <thead>
-          <tr><th>回報時間</th><th>條目</th><th>原本的錯誤</th><th>回報人</th><th>修訂結果</th><th>類別</th></tr>
+          <tr><th>回報時間</th><th>條目</th><th>回報內容</th><th>回報人</th><th>AI意見</th><th>修訂結果</th></tr>
         </thead>
         <tbody id="revbody"><tr><td colspan="6" class="pending">載入中…</td></tr></tbody>
       </table>
@@ -55,25 +56,26 @@
 'use strict';
 const ACT = { 'engine-fix': '引擎修正', 'data-fix': '資料修正', 'ed-overlay': '校訂註記',
               'site-fix': '網站修正', 'zh-overlay': '中譯疊加', 'data-add': '資料新增',
-              '維持照印': '維持照印', '不成立': '不成立' };
+              '維持照印': '維持照印', '不成立': '不成立', '維持': '維持' };
 const escR = s => String(s == null ? '' : s).replace(/[&<>"]/g,
   c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 fetch('data/revisions.json').then(r => r.json()).then(d => {
   const tb = document.getElementById('revbody');
-  const revs = d.revisions || [];
+  const revs = (d.revisions || []).slice().sort((a, b) =>
+    String(b.reported || '').localeCompare(String(a.reported || '')) || ((b.rid || 0) - (a.rid || 0)));
   if (!revs.length) {
     tb.innerHTML = '<tr><td colspan="6" class="pending">尚無修訂紀錄。</td></tr>';
     return;
   }
   tb.innerHTML = revs.map(r => {
-    const keep = (r.action === '維持照印' || r.action === '不成立');
+    const keep = (r.action === '維持照印' || r.action === '不成立' || r.action === '維持');
     return `<tr>
       <td class="nowrap">${escR((r.reported || '').slice(0, 16))}</td>
       <td class="nowrap"><a href="entry.html?id=${encodeURIComponent(r.id || '')}">${escR(r.id)}</a></td>
       <td class="issue">${escR(r.issue)}</td>
       <td class="nowrap">${escR(r.reporter || '—')}</td>
-      <td>${escR(r.resolution)}</td>
-      <td><span class="actchip${keep ? ' keep' : ''}">${escR(ACT[r.action] || r.action || '')}</span></td>
+      <td class="ai">${r.ai ? escR(r.ai) : '—'}</td>
+      <td><span class="actchip${keep ? ' keep' : ''}">${escR(ACT[r.action] || r.action || '')}</span> ${escR(r.resolution)}</td>
     </tr>`;
   }).join('');
 }).catch(() => {
