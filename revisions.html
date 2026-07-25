@@ -8,10 +8,10 @@
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <style>
   .revtable-wrap { overflow-x: auto; }
-  table.revtable { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 900px; }
+  table.revtable { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 900px; table-layout: fixed; }
   table.revtable th, table.revtable td {
     border-bottom: 1px solid var(--line); padding: 8px 10px;
-    text-align: left; vertical-align: top;
+    text-align: left; vertical-align: top; overflow-wrap: break-word;
   }
   table.revtable th {
     color: var(--sub); font-size: 13px; letter-spacing: .08em;
@@ -38,6 +38,10 @@
     <p class="hint">使用者回報經查證後的處理結果，新到舊排列。感謝每一位回報者——你們的眼睛讓這部辭典更可靠。</p>
     <div class="revtable-wrap">
       <table class="revtable">
+        <colgroup>
+          <col style="width:145px"><col style="width:120px"><col>
+          <col style="width:96px"><col><col>
+        </colgroup>
         <thead>
           <tr><th>回報時間</th><th>條目</th><th>回報內容</th><th>回報人</th><th>AI意見</th><th>修訂結果</th></tr>
         </thead>
@@ -71,9 +75,9 @@ fetch('data/revisions.json').then(r => r.json()).then(d => {
     const keep = (r.action === '維持照印' || r.action === '不成立' || r.action === '維持');
     return `<tr>
       <td class="nowrap">${escR((r.reported || '').slice(0, 16))}</td>
-      <td class="nowrap"><a href="entry.html?id=${encodeURIComponent(r.id || '')}">${escR(r.id)}</a></td>
+      <td><a href="entry.html?id=${encodeURIComponent(r.id || '')}">${escR(r.id)}</a></td>
       <td class="issue">${escR(r.issue)}</td>
-      <td class="nowrap">${escR(r.reporter || '—')}</td>
+      <td>${escR(r.reporter || '—')}</td>
       <td class="ai">${r.ai ? escR(r.ai) : '—'}</td>
       <td><span class="actchip${keep ? ' keep' : ''}">${escR(ACT[r.action] || r.action || '')}</span> ${escR(r.resolution)}</td>
     </tr>`;
