@@ -346,6 +346,14 @@ function kanaToPoj(kanaStr) {
 
   if (tokens[0] === 'ン') {
     if (tokens.length === 1) {
+      if (tone === 4 || tone === 8) {
+        // J129-24（2026-07-26 fid121/122）：成節鼻音 ng＋入聲調＝ngh（ン8n=n̍gh；p0085-2-05 咿⿰口掩 i̍hⁿ-n̍gh 首例、同型 hngh 哼）
+        candidates.push({
+          display: k2pAttachTone('ngh', tone),
+          ascii: 'ngh' + tone,
+          onset: 'ng', vowels: [], final: 'h'
+        });
+      }
       candidates.push({
         display: k2pAttachTone('ng', tone),
         ascii: 'ng' + tone,
