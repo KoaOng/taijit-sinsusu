@@ -59,8 +59,12 @@ function parsePoj(raw) {
   s = s.replaceAll('oo', '@').replaceAll('ou', '@');
 
   // *** 順序：先處理 tone digit，再處理 nn 鼻音 ***
+  s = s.replace(/([1-8])nn$/, 'nn$1');   // 數字位置容錯（ih8nn → ihnn8；同 app.js canonTok）
   const m = s.match(/^(.+?)([1-8])$/);
   if (m && tone===0) { s = m[1]; tone = parseInt(m[2]); }
+  // J138-1（2026-07-27）：新 ascii 形 innh8＝nn 在入聲尾 -h 之前。
+  // 保守只認 nnh（不認 nn+其他尾音），零誤傷 'inn'/'in' 類
+  if (s.endsWith('nnh')) { nasal = true; s = s.slice(0, -3) + 'h'; }
   if (s.endsWith('nn')) { nasal = true; s = s.slice(0, -2); }
 
   let rawClean = sRaw.toLowerCase().normalize('NFD');
@@ -93,7 +97,10 @@ function parsePoj(raw) {
     else i++;
   }
   if (tone===0) tone = ['p','t','k','h'].includes(final) ? 4 : 1;
-  return {onset, vowels, final, tone, nasal};
+  // J138-1（2026-07-27）：成節鼻音韻核。hngh 型＝onset + 鼻音韻核(ng/m/n) + 入聲 -h，
+  // final 被 -h 佔走時韻核會從 vowels 漏掉，故單獨帶出（hng 型 final 即韻核，nucleus 空）
+  const nucleus = (!vowels.length && ['ng','m','n'].includes(s)) ? s : '';
+  return {onset, vowels, final, tone, nasal, nucleus};
 }
 
 // 鼻音聲母（m/n/ng）後接母音或獨立音節時，假名自動帶 n 鼻音標
@@ -110,7 +117,12 @@ function pojToKana(pojStr) {
   let syllabicNasal = false;
   if (!parsed.vowels.length && parsed.onset !== 'ng') {
     const onsetIsNasal = ['m', 'n'].includes(parsed.onset);
-    const finalIsNasal = ['ng', 'm', 'n'].includes(parsed.final);
+    let finalIsNasal = ['ng', 'm', 'n'].includes(parsed.final);
+    if (['ng','m','n'].includes(parsed.nucleus) && parsed.final === 'h') {
+      // hngh 型：假名寫韻核（フン），-h 無假名、只由 tone 4/8 體現（J138-1 2026-07-27）
+      parsed.final = parsed.nucleus;
+      finalIsNasal = true;
+    }
     if (onsetIsNasal || (parsed.onset && finalIsNasal)) {
       parsed.vowels = ['u'];
       syllabicNasal = true;
@@ -259,10 +271,16 @@ function k2pBuildAscii(onset, vowels, final, tone, nasal, useOForOO) {
     if (v === 'oo') s += (useOForOO ? 'o' : 'oo');
     else s += v;
   }
+  const nn = (nasal && !NASAL_ONSETS.includes(onset)) ? 'nn' : '';
+  if (final === 'h' && nn) {
+    // J138-1（2026-07-27）：與顯示形同條件——nn 寫在入聲尾 -h 之前（ih8nn → innh8）。
+    // 其餘 final 維持舊形，確保 export_site_data 的 tone_key_ascii ≡ tone_key_disp
+    // （詞形/疊詞比對鍵；若只單邊改會脫鉤）。
+    return s + nn + final + String(tone);
+  }
   if (final) s += final;
   s += String(tone);
-  if (nasal && !NASAL_ONSETS.includes(onset)) s += 'nn';
-  return s;
+  return s + nn;
 }
 
 function kanaToPoj(kanaStr) {
@@ -327,7 +345,11 @@ function kanaToPoj(kanaStr) {
           const effOnset = (nasal && onset === 'g') ? 'ng' : onset;
           let display = k2pBuild(effOnset, vowels, final, tone, useOForOO);
           const ascii = k2pBuildAscii(effOnset, vowels, final, tone, nasal, useOForOO);
-          if (nasal && !NASAL_ONSETS.includes(effOnset)) display += 'ⁿ';
+          // J138-1（2026-07-27）：ⁿ 寫在入聲尾 -h 之前（i̍ⁿh，非 i̍hⁿ）。
+          // 外部旁證：ChhoeTaigi 台日大辭典 ⁿh 484 例／hⁿ 0 例
+          if (nasal && !NASAL_ONSETS.includes(effOnset)) {
+            display = (final === 'h') ? display.slice(0, -1) + 'ⁿh' : display + 'ⁿ';
+          }
           candidates.push({display, ascii, onset: effOnset, vowels, final});
         }
       }
@@ -347,7 +369,7 @@ function kanaToPoj(kanaStr) {
   if (tokens[0] === 'ン') {
     if (tokens.length === 1) {
       if (tone === 4 || tone === 8) {
-        // J129-24（2026-07-26 fid121/122）：成節鼻音 ng＋入聲調＝ngh（ン8n=n̍gh；p0085-2-05 咿⿰口掩 i̍hⁿ-n̍gh 首例、同型 hngh 哼）
+        // J129-24（2026-07-26 fid121/122）：成節鼻音 ng＋入聲調＝ngh（ン8n=n̍gh；p0085-2-05 咿⿰口掩 i̍ⁿh-n̍gh 首例、同型 hngh 哼）
         candidates.push({
           display: k2pAttachTone('ngh', tone),
           ascii: 'ngh' + tone,
@@ -391,40 +413,43 @@ function kanaToPoj(kanaStr) {
   // === syllabic nasal candidates (nasal flag + onset/final m/n/ng + 假性 vowel u) ===
   if (nasal) {
     const syllabicAdded = [];
+    // J138-1（2026-07-27）入聲通則：4/8 調韻尾非 p/t/k 者一律補 -h（孤ン n̍gh 同制，同型 hngh 哼）
+    // nucleus＝韻核（m/n/ng），供 k2pAttachTone 定位調號用
+    const sylAdd = (sylBase, onset_, nucleus, baseFinal) => {
+      const ent = (tone === 4 || tone === 8);
+      const syl = sylBase + (ent ? 'h' : '');
+      syllabicAdded.push({
+        display: k2pAttachTone(syl, tone, [], nucleus, onset_),
+        ascii: syl + tone,
+        onset: onset_, vowels: [], final: ent ? 'h' : baseFinal
+      });
+    };
     for (const c of candidates) {
       const isU = c.vowels.length === 1 && c.vowels[0] === 'u';
       if (!isU) continue;
       // Pattern A: m̂ / n̂ (onset m/n, no final)
       if ((c.onset === 'm' || c.onset === 'n') && !c.final) {
-        const syl = c.onset;
-        syllabicAdded.push({
-          display: k2pAttachTone(syl, tone, [], '', c.onset),
-          ascii: c.onset + tone,
-          onset: c.onset, vowels: [], final: ''
-        });
+        sylAdd(c.onset, c.onset, c.onset, '');
       }
       // Pattern B: hm̂ (h onset, m/n/ng final)
       if (c.onset === 'h' && (c.final === 'm' || c.final === 'n' || c.final === 'ng')) {
-        const syl = c.onset + c.final;
-        syllabicAdded.push({
-          display: k2pAttachTone(syl, tone, [], c.final, c.onset),
-          ascii: c.onset + c.final + tone,
-          onset: c.onset, vowels: [], final: c.final
-        });
+        sylAdd(c.onset + c.final, c.onset, c.final, c.final);
       }
       // Pattern C: 通用成音節 ng（tng/sng/kng/nng/mng…；fid=2 回報：返 tńg 誤 túngⁿ）
       if (c.final === 'ng') {
-        const syl = c.onset + c.final;
-        syllabicAdded.push({
-          display: k2pAttachTone(syl, tone, [], c.final, c.onset),
-          ascii: c.onset + c.final + tone,
-          onset: c.onset, vowels: [], final: c.final
-        });
+        sylAdd(c.onset + c.final, c.onset, c.final, c.final);
       }
     }
     // syllabic candidate 排前面（priority 高，因為 nasal flag 通常表 syllabic）
     candidates.unshift(...syllabicAdded);
   }
+  if (tone === 4 || tone === 8) {
+    // J138-1（2026-07-27）入聲通則：4/8 調韻尾必為 p/t/k/h。
+    // 無尾／鼻尾候選（i̍ⁿ、n̍g、ka…）非法，剔除
+    const legal = candidates.filter(c => ['p','t','k','h'].includes(c.final));
+    if (legal.length) candidates.splice(0, candidates.length, ...legal);  // candidates 為 const，就地置換
+  }
+
   const seen = new Set();
   const unique = [];
   for (const c of candidates) {
