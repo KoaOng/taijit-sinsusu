@@ -283,6 +283,36 @@ function k2pBuildAscii(onset, vowels, final, tone, nasal, useOForOO) {
   return s + nn;
 }
 
+// o͘ 韻核防呆（167th 同步自 kana_poj.py oo_nucleus_bad；2026-07-31）
+// 動機＝殺幽靈候選（ソ̄エ7→chooe7、コオ2→kooo2、トヲ→tooo1）；但不可連 io͘／eo͘ 一起擋
+// （站主裁：io͘ 不是錯誤，其他字會用到——p0099-1-10 搖皷 照印 イオ5 即為實例）。
+//   ① o͘ 必須是韻核最後一個母音  ② o͘ 不與 o 相鄰  ③ final ∈ ng/p/k 不在此限（iong/iok）
+function ooNucleusBad(vowels, final) {
+  if (vowels.length < 2 || final === 'ng' || final === 'p' || final === 'k') return false;
+  if (vowels.slice(0, -1).includes('oo')) return true;
+  for (let i = 0; i < vowels.length - 1; i++) {
+    const pair = [vowels[i], vowels[i + 1]];
+    if (pair.includes('o') && pair.includes('oo')) return true;
+  }
+  return false;
+}
+
+// 台語韻母合法性（2026-07-31 站主裁定）——剔除「台語不存在的音」幽靈候選。
+// 站主原話：「mu/nu 單獨存在、mung 和 tung 都是台語不存在的發音」「ngu 確定沒有」
+// 「ソム 只會對 som」。真語料受害 20 種／98 次出現。
+//   R1 韻核恰 u ＋ 尾 ng/k/m/p → 不存在（un／ut 存在，故不含 n/t）
+//   R2 韻核恰 o͘ ＋ 尾 m/n/t → 不存在（soom 型）
+//      ★不含 ng/p/k：那三個尾的 ascii 由 useOForOO 寫回 o，ong／ok／op 皆合法
+//   R3 鼻音聲母 m/n/ng ＋ 韻核恰 u ＋ 無尾 → 不存在（mu／nu／ngu；mui 為 ['u','i'] 保留）
+// ★呼叫時機：只能在**最終候選集**上濾。mu7／mung5／tung2nn 是 sylAdd 衍生成節鼻音
+// 正解（m7／mng5／tng2）的必要跳板，在生成迴圈內剔除會連正解一起消失（已實測誤殺 21 種）。
+function illegalRime(onset, vowels, final) {
+  if (vowels.length === 1 && vowels[0] === 'u' && ['ng','k','m','p'].includes(final)) return true;
+  if (vowels.length === 1 && vowels[0] === 'oo' && ['m','n','t'].includes(final)) return true;
+  if (['m','n','ng'].includes(onset) && vowels.length === 1 && vowels[0] === 'u' && !final) return true;
+  return false;
+}
+
 function kanaToPoj(kanaStr) {
   let s = (kanaStr || '').trim();
   s = s.replace(/ゥ/g, 'ウ').replace(/ぅ/g, 'う'); // J28-1 長音第二拍小字正規化（HR004 補條款 2026-07-10）
@@ -340,6 +370,7 @@ function kanaToPoj(kanaStr) {
 
           // 音理防呆：三連同母音非法（POJ 無 iii 類韻核；2026-07-22，怎 チヰイ2n 案）
           if (vowels.some((v, i) => i >= 2 && v === vowels[i-1] && v === vowels[i-2])) continue;
+          if (ooNucleusBad(vowels, final)) continue;
           const useOForOO = (final === 'ng' || final === 'p' || final === 'k');
           // ガ行假名＋鼻音n → ng聲母（2026-07-22 裁決；g 的鼻音化即 ng，POJ 不寫 ⁿ）
           const effOnset = (nasal && onset === 'g') ? 'ng' : onset;
@@ -398,6 +429,7 @@ function kanaToPoj(kanaStr) {
           for (const vowels of combos) {
             // 音理防呆：三連同母音非法（同 tryParse；2026-07-22）
             if (vowels.some((v, i) => i >= 2 && v === vowels[i-1] && v === vowels[i-2])) continue;
+            if (ooNucleusBad(vowels, final)) continue;
             const useOForOO = (final === 'ng' || final === 'p' || final === 'k');
             const display = k2pBuild('ng', vowels, final, tone, useOForOO);
             const ascii = k2pBuildAscii('ng', vowels, final, tone, nasal, useOForOO);
@@ -443,6 +475,12 @@ function kanaToPoj(kanaStr) {
     // syllabic candidate 排前面（priority 高，因為 nasal flag 通常表 syllabic）
     candidates.unshift(...syllabicAdded);
   }
+  // 台語韻母合法性濾網（2026-07-31）——須在成節鼻音衍生之後，見 illegalRime 註解
+  {
+    const kept = candidates.filter(c => !illegalRime(c.onset, c.vowels, c.final));
+    candidates.splice(0, candidates.length, ...kept);
+  }
+
   if (tone === 4 || tone === 8) {
     // J138-1（2026-07-27）入聲通則：4/8 調韻尾必為 p/t/k/h。
     // 無尾／鼻尾候選（i̍ⁿ、n̍g、ka…）非法，剔除

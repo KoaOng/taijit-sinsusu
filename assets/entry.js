@@ -64,12 +64,18 @@ function rubyOrig(unit) {
   let rt = esc(r.k) + (r.tn ? `<sup class="tn">${esc(r.tn)}</sup>` : '');
   let cls = r.lang === 'tw' ? 'tw' : 'jp';
   let attr = '';
+  let base = esc(unit.u);
   if (r.ed) {
     rt += '*';
     attr = ` title="校訂：${r.ed.corr ? esc(r.ed.corr) + '｜' : ''}${esc(r.ed.note)}"`;
     cls += ' ed';
   }
-  return annBox(cls, attr, esc(unit.u), rt);
+  if (r.orig) {                        // 173rd：校改存印（底本已依裁決校改；＊ 的鏡像機制）
+    if (r.orig.at === 'kana') rt += '†'; else base += '<sup class="em">†</sup>';
+    attr = ` title="校改存印：原印面「${esc(r.orig.was)}」｜${esc(r.orig.note)}"`;
+    cls += ' emend';
+  }
+  return annBox(cls, attr, base, rt);
 }
 
 function rubyModern(unit) {
@@ -130,6 +136,9 @@ function headKanaHTML(head) {
   let out = '';
   for (const t of head.kana || []) {
     out += esc(t.k) + (t.tn ? `<sup class="tn">${esc(t.tn)}</sup>` : '');
+    if (t.orig) {                      // 173rd：head 校改存印（遊 J150-9／窩 J150-16）
+      out += `<sup class="em" title="校改存印：原印面「${esc(t.orig.was)}」｜${esc(t.orig.note)}">†</sup>`;
+    }
     if (t.sep === '--') out += '--';
     else if (t.sep) out += ' ';
   }
@@ -311,12 +320,31 @@ function collectEd(e) {
   (((e.head || {}).kana) || []).forEach(t => { if (t && t.ed) out.push({ u: t.k, ed: t.ed }); });  // head ed（J50-2）
   return out;
 }
+function collectOrig(e) {
+  // 173rd：收集本條目所有掛 orig 校改存印層的 token（底本已依裁決校改，原印面存 was）
+  const out = [];
+  const scan = units => (units || []).forEach(u => {
+    if (u && u.r && u.r.orig) out.push({ now: u.r.orig.at === 'kana' ? (u.r.k || '') + (u.r.tn || '') : u.u, orig: u.r.orig });
+  });
+  (e.senses || []).forEach(s => {
+    scan(s.gloss);
+    (s.notes || []).forEach(n => scan(n.units));
+    (s.examples || []).forEach(x => { scan(x.tw); scan(x.jp); });
+  });
+  (e.refs || []).forEach(r => scan(r.kanji));
+  (((e.head || {}).kana) || []).forEach(t => { if (t && t.orig) out.push({ now: t.k + (t.tn || ''), orig: t.orig }); });
+  return out;
+}
 function blockOriginal(e) {
   const total = (e.senses || []).length;
   const senses = (e.senses || []).map((s, i) => senseHTML(s, i, total, false, e.zh_status, e)).join('');
   const eds = collectEd(e);
   const edLegend = eds.length
     ? `<div class="ednote"><b>＊</b>＝校訂註（底本照印存真，另記有依據之音理校訂）：${eds.map(x => `${esc(x.u)}〔${esc(x.ed.note || x.ed.corr)}〕`).join('；')}</div>`
+    : '';
+  const ems = collectOrig(e);            // 173rd：校改存印圖例（與 ＊ 並列、語意相反不可混）
+  const emLegend = ems.length
+    ? `<div class="ednote"><b>†</b>＝校改存印（原冊誤植／漏印，底本已依裁決校改，原印面存記於此）：${ems.map(x => `原印面「${esc(x.orig.was)}」→「${esc(x.now)}」〔${esc(x.orig.note)}〕`).join('；')}</div>`
     : '';
   let idsLegend = '';                    // 合字圖例（J50 D5 fid20）：條目含組字式時說明記法
   try {
@@ -326,7 +354,7 @@ function blockOriginal(e) {
   } catch (err) { /* noop */ }
   return `<section class="card" data-blockname="原冊數位化">
     <h2>原冊數位化（照印）<button class="reportbtn" data-block="原冊數位化">回報錯誤</button></h2>
-    ${origHead(e)}${senses}${refsHTML(e, false)}${kanjiNotesHTML(e)}${edLegend}${idsLegend}
+    ${origHead(e)}${senses}${refsHTML(e, false)}${kanjiNotesHTML(e)}${edLegend}${emLegend}${idsLegend}
   </section>`;
 }
 
