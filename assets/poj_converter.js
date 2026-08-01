@@ -2,6 +2,9 @@
 // 2026-07-22: ng聲母＝ガ行假名＋鼻音n 裁決（ギアウ1n=ngiau p0110-1-04、ゴオ2n=ngó͘ p0074/p0103、
 //   ゴオ5n=ngô͘ p0058-2-05；舊 ン+母音 記法廢止，kana→POJ 之 ン+母音 解析保留為歷史輸入防禦層）
 // 提供：parsePoj / pojToKana / kanaToPoj
+// 引擎版本戳（修法三 2026-08-01 起）：與 v2_redo/kana_poj.py 及各內嵌副本必須同值；
+// export_site_data.py 上站複製前對版靠它。改引擎規則＝同批改所有副本＋此戳。
+const ENGINE_VERSION = '2026-08-01';
 const OV = {
   '':   {'a':'ア','i':'イ','u':'ウ','e':'エ','o':'ヲ','oo':'オ','ir':'ウ̄','er':'オ̄'},
   'k':  {'a':'カ','i':'キ','u':'ク','e':'ケ','o':'コ','oo':'コ'},
@@ -442,9 +445,12 @@ function kanaToPoj(kanaStr) {
     }
   }
 
-  // === syllabic nasal candidates (nasal flag + onset/final m/n/ng + 假性 vowel u) ===
-  if (nasal) {
-    const syllabicAdded = [];
+  // === syllabic nasal candidates (onset/final m/n/ng + 假性 vowel u) ===
+  // 修法三（2026-08-01）：衍生不再只在 nasal 旗時計算。有旗＝照舊置前；
+  // 無旗＝只當「後備」——illegalRime 濾後零候選才啟用（ム→m、スン→sng 死區）。
+  // フヌ（分 hun）這類有合法一般讀法的無旗 token 候選集零變動。與 kana_poj.py 同步。
+  const syllabicAdded = [];
+  {
     // J138-1（2026-07-27）入聲通則：4/8 調韻尾非 p/t/k 者一律補 -h（孤ン n̍gh 同制，同型 hngh 哼）
     // nucleus＝韻核（m/n/ng），供 k2pAttachTone 定位調號用
     const sylAdd = (sylBase, onset_, nucleus, baseFinal) => {
@@ -472,13 +478,20 @@ function kanaToPoj(kanaStr) {
         sylAdd(c.onset + c.final, c.onset, c.final, c.final);
       }
     }
-    // syllabic candidate 排前面（priority 高，因為 nasal flag 通常表 syllabic）
-    candidates.unshift(...syllabicAdded);
+    if (nasal) {
+      // syllabic candidate 排前面（priority 高，因為 nasal flag 通常表 syllabic）
+      candidates.unshift(...syllabicAdded);
+    }
   }
   // 台語韻母合法性濾網（2026-07-31）——須在成節鼻音衍生之後，見 illegalRime 註解
   {
     const kept = candidates.filter(c => !illegalRime(c.onset, c.vowels, c.final));
     candidates.splice(0, candidates.length, ...kept);
+    if (!nasal && !candidates.length && syllabicAdded.length) {
+      // 修法三後備：無旗且無任何合法一般讀法 → 成節鼻音衍生解上場
+      candidates.push(...syllabicAdded.filter(
+        c => !illegalRime(c.onset, c.vowels, c.final)));
+    }
   }
 
   if (tone === 4 || tone === 8) {
