@@ -240,8 +240,10 @@ function senseHTML(s, i, total, modern, zhStatus, e) {
     if (!modern) {
       const orig = textOfUnits(x.tw) + '＝' + textOfUnits(x.jp);
       const rb = [rubyDump(x.tw, false), rubyDump(x.jp, false)].filter(Boolean).join('；');
-      return `<div class="example"${editAttr(ep)}${origAttr(orig, rb)}><span class="tw">${unitsHTML(x.tw, false)}</span>` +
-             `<span class="eqsign">＝</span><span class="jp">${unitsHTML(x.jp, false)}</span></div>`;
+      const em = f => (x.orig && x.orig.at === f)   // 194th J194-9：文字級校改存印（欄整段校改）
+        ? `<sup class="em" title="校改存印：原印面「${esc(x.orig.was)}」｜${esc(x.orig.note)}">†</sup>` : '';
+      return `<div class="example"${editAttr(ep)}${origAttr(orig, rb)}><span class="tw">${unitsHTML(x.tw, false)}${em('tw')}</span>` +
+             `<span class="eqsign">＝</span><span class="jp">${unitsHTML(x.jp, false)}${em('jp')}</span></div>`;
     }
     const zh = x.zh
       ? `<span class="zhline">${zhHTML(x.zh, x.zh_units)}</span>`
@@ -329,7 +331,10 @@ function collectOrig(e) {
   (e.senses || []).forEach(s => {
     scan(s.gloss);
     (s.notes || []).forEach(n => scan(n.units));
-    (s.examples || []).forEach(x => { scan(x.tw); scan(x.jp); });
+    (s.examples || []).forEach(x => {
+      scan(x.tw); scan(x.jp);
+      if (x.orig) out.push({ now: textOfUnits(x.orig.at === 'jp' ? x.jp : x.tw), orig: x.orig });  // 194th：文字級
+    });
   });
   (e.refs || []).forEach(r => scan(r.kanji));
   (((e.head || {}).kana) || []).forEach(t => { if (t && t.orig) out.push({ now: t.k + (t.tn || ''), orig: t.orig }); });
