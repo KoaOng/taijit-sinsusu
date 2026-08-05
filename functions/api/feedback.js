@@ -2,6 +2,8 @@
 // POST：夥伴回報寫入 D1（欄位長度上限、prepared statement）
 // GET ?token=&since=：管理者增量拉取（JSONL；token 比對 env.ADMIN_TOKEN）
 // 綁定需求：D1 binding 變數名 DB＋Secret ADMIN_TOKEN（Pages 專案 Settings）
+// 2026-08-05 多把制：ADMIN_TOKEN 值＝逗號分隔的 token 清單（一人一把；
+//   撤某人＝從清單刪該把＋重佈署，其餘把不受影響）。單一值仍相容（清單長度 1）。
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
@@ -35,7 +37,9 @@ export async function onRequestPost({ request, env }) {
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const token = url.searchParams.get('token') || '';
-  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
+  const valid = String(env.ADMIN_TOKEN || '')
+    .split(',').map(s => s.trim()).filter(Boolean);   // 多把制：逗號分隔清單
+  if (!token || !valid.includes(token)) {
     return new Response('unauthorized', { status: 401 });
   }
   if (!env.DB) return new Response('no-binding', { status: 500 });
