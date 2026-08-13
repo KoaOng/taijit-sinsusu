@@ -320,6 +320,7 @@ function kanaToPoj(kanaStr) {
   let s = (kanaStr || '').trim();
   s = s.replace(/ゥ/g, 'ウ').replace(/ぅ/g, 'う'); // J28-1 長音第二拍小字正規化（HR004 補條款 2026-07-10）
   s = s.replace(/ヰ/g, 'イ').replace(/ゐ/g, 'い'); // ヰ 照印入資料、轉換視同イ（2026-07-22 裁決）
+  s = s.replace(/ヱ/g, 'エ').replace(/ゑ/g, 'え'); // ヱ 照印入資料、轉換視同エ（2026-08-12 K248th 裁決，鏡像ヰ規則）
   if (!s) return [];
   let tone = 1, nasal = false;
   if (s.endsWith('n')) { nasal = true; s = s.slice(0, -1); }
