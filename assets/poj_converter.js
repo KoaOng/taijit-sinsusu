@@ -4,7 +4,7 @@
 // 提供：parsePoj / pojToKana / kanaToPoj
 // 引擎版本戳（修法三 2026-08-01 起）：與 v2_redo/kana_poj.py 及各內嵌副本必須同值；
 // export_site_data.py 上站複製前對版靠它。改引擎規則＝同批改所有副本＋此戳。
-const ENGINE_VERSION = '2026-08-01';
+const ENGINE_VERSION = '2026-08-20';
 const OV = {
   '':   {'a':'ア','i':'イ','u':'ウ','e':'エ','o':'ヲ','oo':'オ','ir':'ウ̄','er':'オ̄'},
   'k':  {'a':'カ','i':'キ','u':'ク','e':'ケ','o':'コ','oo':'コ'},
@@ -374,6 +374,9 @@ function kanaToPoj(kanaStr) {
 
           // 音理防呆：三連同母音非法（POJ 無 iii 類韻核；2026-07-22，怎 チヰイ2n 案）
           if (vowels.some((v, i) => i >= 2 && v === vowels[i-1] && v === vowels[i-2])) continue;
+          // K306th（2026-08-20 站主裁；fid534 p0140-3-01【掩】）：零聲母 オ ＋ 尾 m → o（非 o͘）。
+          // o͘m 台語不存在（illegalRime R2），本書零聲母 om 一律寫作 オム；ヲ＋m 全書零例。
+          if (!onset && vowels.length === 1 && vowels[0] === 'oo' && final === 'm') vowels = ['o'];
           if (ooNucleusBad(vowels, final)) continue;
           const useOForOO = (final === 'ng' || final === 'p' || final === 'k');
           // ガ行假名＋鼻音n → ng聲母（2026-07-22 裁決；g 的鼻音化即 ng，POJ 不寫 ⁿ）
