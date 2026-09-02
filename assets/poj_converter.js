@@ -4,7 +4,7 @@
 // 提供：parsePoj / pojToKana / kanaToPoj
 // 引擎版本戳（修法三 2026-08-01 起）：與 v2_redo/kana_poj.py 及各內嵌副本必須同值；
 // export_site_data.py 上站複製前對版靠它。改引擎規則＝同批改所有副本＋此戳。
-const ENGINE_VERSION = '2026-08-20';
+const ENGINE_VERSION = '2026-09-01';
 const OV = {
   '':   {'a':'ア','i':'イ','u':'ウ','e':'エ','o':'ヲ','oo':'オ','ir':'ウ̄','er':'オ̄'},
   'k':  {'a':'カ','i':'キ','u':'ク','e':'ケ','o':'コ','oo':'コ'},
@@ -106,7 +106,7 @@ function parsePoj(raw) {
   return {onset, vowels, final, tone, nasal, nucleus};
 }
 
-// 鼻音聲母（m/n/ng）後接母音或獨立音節時，假名自動帶 n 鼻音標
+// 鼻音字首（子音）（m/n/ng）後接母音或獨立音節時，假名自動帶 n 鼻音標
 // POJ 不重複標 ⁿ（避免 máⁿ 等非法寫法）— 詳見 kana_poj_rules.json special_rules.auto_nasalize_onsets
 const NASAL_ONSETS = ['m', 'n', 'ng'];
 
@@ -114,7 +114,7 @@ function pojToKana(pojStr) {
   const parsed = parsePoj(pojStr);
   if (!parsed) return null;
 
-  // 成節鼻音檢測：vowels 空 + (鼻音聲母 m/n 或 鼻音尾 ng/m/n) → 補假性 'u' + 強制 nasal
+  // 成節鼻音檢測：vowels 空 + (鼻音字首（子音） m/n 或 鼻音尾 ng/m/n) → 補假性 'u' + 強制 nasal
   // 例：tńg → t+成節ng → 補u → ツ̄ン2n；m̂ → m 自身成節 → 補u → ム5n
   // 不影響 onset='ng' 的 case（n̂g → ン）— 那已由下方 ng_initial 邏輯處理
   let syllabicNasal = false;
@@ -136,8 +136,13 @@ function pojToKana(pojStr) {
 
   let onset = parsed.onset;
   const vowels = parsed.vowels, fin = parsed.final, tone = parsed.tone;
-  // 自動鼻音化：m/n/ng 聲母 + 成節鼻音 → 強制 nasal=true
-  let nasal = parsed.nasal || NASAL_ONSETS.includes(parsed.onset) || syllabicNasal;
+  // 自動鼻音化：m/n/ng 字首 + 成節鼻音 → 強制 nasal=true
+  // mîn 型（m/n 字首＋鼻音字尾）：原冊印面無圈＝照印不帶 n（K370th 站主裁 2026-08-27；
+  // p0948 免 mián＝ミエヌ2、明 mîn＝ミヌ5）。ng 字首不豁免——其 n 兼作「ガ行=ng」標記。
+  // K407th 補同步：canon JS 漏此段致 Py↔JS 回程 mîn／mián 不一致（query_demo.html 早已有）。
+  const autoOnsetNasal = NASAL_ONSETS.includes(parsed.onset)
+    && !(['m', 'n'].includes(parsed.onset) && ['m', 'n', 'ng'].includes(parsed.final));
+  let nasal = parsed.nasal || autoOnsetNasal || syllabicNasal;
   const parts = [];
   let firstVowel = vowels.length ? vowels[0] : null;
   let lookupVowel = firstVowel;
@@ -147,7 +152,7 @@ function pojToKana(pojStr) {
 
   if (onset === 'ng' && !vowels.length) parts.push('ン');
   else if (onset === 'ng') {
-    // ng聲母＝ガ行假名＋鼻音n（2026-07-22 裁決；nasal 已由 NASAL_ONSETS 判定為 true）
+    // ng字首＝ガ行假名＋鼻音n（2026-07-22 裁決；nasal 已由 NASAL_ONSETS 判定為 true）
     onset = 'g';
   }
 
@@ -160,8 +165,10 @@ function pojToKana(pojStr) {
       pushOrErr((OV[onset]||{})[lookupVowel]);
     } else {
       let v = firstVowel;
-      if (v==='o' && (fin==='p'||fin==='k')) v='oo';
-      if (v==='o' && fin==='ng') v='oo';
+      // K404th（2026-09-01 站主裁）：o 只在「直接」接 ng/m 時為 オ——oang→ヲアン、om→オム、
+      // ヲム不存在；鄰接＝單母音，四種尾（p/k/ng/m）同一條件；多母音＋p/k 亦適用（oak→ヲアク，純規則 pin）。
+      // K407th 補同步：K404th 只改了 kana_poj.py，JS 漏同步（oang／om／oak 三種回程不一致）。
+      if (v==='o' && vowels.length===1 && (fin==='p'||fin==='k'||fin==='ng'||fin==='m')) v='oo';
       if (ekEng) v='i';
       pushOrErr(V_L[v]);
     }
@@ -170,8 +177,8 @@ function pojToKana(pojStr) {
     else if (vowels.length>=2) middleVowels = vowels.slice(1);
     // POJ → kana 反向同化: ia + (t/n/m/p) → ie (e.g. hian→ヒエヌ, hiam→ヒエム)
     if (vowels.length===2 && vowels[0]==='i' && vowels[1]==='a' && ['t','n'].includes(fin)) middleVowels=['e'];  // 同化只在 t/n（auto_ruby 同步；キアム/チ̄アム/ヒアプ 原書實證 2026-07-08）
-    middleVowels = middleVowels.map(v =>
-      (v==='o' && (fin==='ng'||fin==='p'||fin==='k')) ? 'oo' : v);
+    middleVowels = middleVowels.map((v, i) =>
+      (v==='o' && i===middleVowels.length-1 && (fin==='ng'||fin==='p'||fin==='k'||fin==='m')) ? 'oo' : v);  // K404th：限直接接尾的那個 o
     for (const mv of middleVowels) pushOrErr(V_L[mv]);
   }
   if (fin && fin !== 'h') pushOrErr(F_L[fin]);
@@ -300,35 +307,54 @@ function ooNucleusBad(vowels, final) {
   return false;
 }
 
-// 台語韻母合法性（2026-07-31 站主裁定）——剔除「台語不存在的音」幽靈候選。
-// 站主原話：「mu/nu 單獨存在、mung 和 tung 都是台語不存在的發音」「ngu 確定沒有」
-// 「ソム 只會對 som」。真語料受害 20 種／98 次出現。
-//   R1 韻核恰 u ＋ 尾 ng/k/m/p → 不存在（un／ut 存在，故不含 n/t）
-//   R2 韻核恰 o͘ ＋ 尾 m/n/t → 不存在（soom 型）
+// 台語韻母合法性黑名單——剔除「台語不存在的音」幽靈候選。與 kana_poj.py illegal_rime 同步。
+// 回傳命中的規則名（字串；合法回 ''，truthiness 與舊版 bool 相容）。規則名帶裁定場次前綴（K407th 起），
+// 供 kanaToPojDiag 的 killed 死因診斷；0731-* 見下方原話、M002-* 見維護工程 reports/M002_blacklist_rulings.md §一。
+// 0731-*（2026-07-31 站主裁定；原話「mu/nu 單獨存在、mung 和 tung 都是台語不存在的發音」「ngu 確定沒有」
+// 「ソム 只會對 som」。真語料受害 20 種／98 次出現）
+//   0731-R1 韻核恰 u ＋ 尾 ng/k/m/p → 不存在（un／ut 存在，故不含 n/t）
+//   0731-R2 韻核恰 o͘ ＋ 尾 m/n/t → 不存在（soom 型）
 //      ★不含 ng/p/k：那三個尾的 ascii 由 useOForOO 寫回 o，ong／ok／op 皆合法
-//   R3 鼻音聲母 m/n/ng ＋ 韻核恰 u ＋ 無尾 → 不存在（mu／nu／ngu；mui 為 ['u','i'] 保留）
+//   0731-R3 鼻音字首 m/n/ng ＋ 韻核恰 u ＋ 無尾 → 不存在（mu／nu／ngu；mui 為 ['u','i'] 保留）
+// M002-*（2026-09-01 站主裁定；K407th 落地；斷言僅限引擎內部候選之 POJ 拼式）
+//   M002-R1 韻核序列中 u 後緊接非 i 母音（uo/ua/ue/uai/uan…）→ 不存在；ui 合法、oang／oak（o 起頭）不受影響
+//   M002-R2 韻核序列中 e 後接任何母音（ei/ea/eo/ee/oei…）→ 不存在；eng/ek、oe（e 居末）、泉腔 er 不受影響
+//   兩條依「序列位置」逐對相鄰母音判定，非整串比對。
 // ★呼叫時機：只能在**最終候選集**上濾。mu7／mung5／tung2nn 是 sylAdd 衍生成節鼻音
 // 正解（m7／mng5／tng2）的必要跳板，在生成迴圈內剔除會連正解一起消失（已實測誤殺 21 種）。
 function illegalRime(onset, vowels, final) {
-  if (vowels.length === 1 && vowels[0] === 'u' && ['ng','k','m','p'].includes(final)) return true;
-  if (vowels.length === 1 && vowels[0] === 'oo' && ['m','n','t'].includes(final)) return true;
-  if (['m','n','ng'].includes(onset) && vowels.length === 1 && vowels[0] === 'u' && !final) return true;
-  return false;
+  if (vowels.length === 1 && vowels[0] === 'u' && ['ng','k','m','p'].includes(final)) return '0731-R1';
+  if (vowels.length === 1 && vowels[0] === 'oo' && ['m','n','t'].includes(final)) return '0731-R2';
+  if (['m','n','ng'].includes(onset) && vowels.length === 1 && vowels[0] === 'u' && !final) return '0731-R3';
+  for (let i = 0; i < vowels.length - 1; i++) {
+    if (vowels[i] === 'u' && vowels[i + 1] !== 'i') return 'M002-R1';
+    if (vowels[i] === 'e') return 'M002-R2';
+  }
+  return '';
 }
 
+// kana → POJ 候選（至多 5）。K407th 起＝kanaToPojDiag(...).alive 的薄包裝，既有呼叫端零變化。
 function kanaToPoj(kanaStr) {
+  return kanaToPojDiag(kanaStr).alive;
+}
+
+// kana → POJ 候選＋死因診斷（M002 §三條 2；K407th；與 kana_poj.py kana_to_poj_diag 同步）。
+// 回 {alive:[...同 kanaToPoj...], killed:[{poj, ascii, rule}, ...]}；killed＝被 illegalRime 黑名單濾掉者
+// （主濾＋修法三後備濾；依 (display, rule) 去重）。不收生成迴圈內排除與 J138-1 入聲濾網（生成約束，非黑名單）。
+function kanaToPojDiag(kanaStr) {
+  const EMPTY = {alive: [], killed: []};
   let s = (kanaStr || '').trim();
   s = s.replace(/ゥ/g, 'ウ').replace(/ぅ/g, 'う'); // J28-1 長音第二拍小字正規化（HR004 補條款 2026-07-10）
   s = s.replace(/ヰ/g, 'イ').replace(/ゐ/g, 'い'); // ヰ 照印入資料、轉換視同イ（2026-07-22 裁決）
   s = s.replace(/ヱ/g, 'エ').replace(/ゑ/g, 'え'); // ヱ 照印入資料、轉換視同エ（2026-08-12 K248th 裁決，鏡像ヰ規則）
-  if (!s) return [];
+  if (!s) return EMPTY;
   let tone = 1, nasal = false;
   if (s.endsWith('n')) { nasal = true; s = s.slice(0, -1); }
   const tm = s.match(/^(.+?)([1-8])$/);
   if (tm) { tone = parseInt(tm[2]); s = tm[1]; }
-  if (!s) return [];
+  if (!s) return EMPTY;
   const tokens = k2pTokenize(s);
-  if (!tokens.length) return [];
+  if (!tokens.length) return EMPTY;
 
   const candidates = [];
 
@@ -375,7 +401,7 @@ function kanaToPoj(kanaStr) {
           // 音理防呆：三連同母音非法（POJ 無 iii 類韻核；2026-07-22，怎 チヰイ2n 案）
           if (vowels.some((v, i) => i >= 2 && v === vowels[i-1] && v === vowels[i-2])) continue;
           // K306th（2026-08-20 站主裁；fid534 p0140-3-01【掩】）：零聲母 オ ＋ 尾 m → o（非 o͘）。
-          // o͘m 台語不存在（illegalRime R2），本書零聲母 om 一律寫作 オム；ヲ＋m 全書零例。
+          // o͘m 台語不存在（illegalRime 0731-R2），本書零聲母 om 一律寫作 オム；ヲ＋m 全書零例。
           if (!onset && vowels.length === 1 && vowels[0] === 'oo' && final === 'm') vowels = ['o'];
           if (ooNucleusBad(vowels, final)) continue;
           const useOForOO = (final === 'ng' || final === 'p' || final === 'k');
@@ -488,13 +514,23 @@ function kanaToPoj(kanaStr) {
     }
   }
   // 台語韻母合法性濾網（2026-07-31）——須在成節鼻音衍生之後，見 illegalRime 註解
+  // K407th：不再沉默丟棄——被殺候選連同規則名收進 killed（死因診斷）
+  const killed = [];
+  const filterAlive = (cs) => {
+    const alive = [];
+    for (const c of cs) {
+      const rule = illegalRime(c.onset, c.vowels, c.final);
+      if (rule) killed.push({poj: c.display, ascii: c.ascii, rule});
+      else alive.push(c);
+    }
+    return alive;
+  };
   {
-    const kept = candidates.filter(c => !illegalRime(c.onset, c.vowels, c.final));
+    const kept = filterAlive(candidates);
     candidates.splice(0, candidates.length, ...kept);
     if (!nasal && !candidates.length && syllabicAdded.length) {
       // 修法三後備：無旗且無任何合法一般讀法 → 成節鼻音衍生解上場
-      candidates.push(...syllabicAdded.filter(
-        c => !illegalRime(c.onset, c.vowels, c.final)));
+      candidates.push(...filterAlive(syllabicAdded));
     }
   }
 
@@ -520,5 +556,11 @@ function kanaToPoj(kanaStr) {
     if ((a.onset !== '') !== (b.onset !== '')) return a.onset !== '' ? -1 : 1;
     return a.display.length - b.display.length;
   });
-  return unique.slice(0, 5);
+  const kSeen = new Set();
+  const kUnique = [];
+  for (const k of killed) {
+    const key = k.poj + '\u0000' + k.rule;
+    if (!kSeen.has(key)) { kSeen.add(key); kUnique.push(k); }
+  }
+  return {alive: unique.slice(0, 5), killed: kUnique};
 }
