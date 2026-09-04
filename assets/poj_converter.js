@@ -4,7 +4,7 @@
 // 提供：parsePoj / pojToKana / kanaToPoj
 // 引擎版本戳（修法三 2026-08-01 起）：與 v2_redo/kana_poj.py 及各內嵌副本必須同值；
 // export_site_data.py 上站複製前對版靠它。改引擎規則＝同批改所有副本＋此戳。
-const ENGINE_VERSION = '2026-09-01';
+const ENGINE_VERSION = '2026-09-04';   // K413rd：V2-STOP 逆向（p/t/k 尾必 4/8；只對明寫調號）＋K413-KANA1（エン／エク 必 イエ）；與 kana_poj.py 同步
 const OV = {
   '':   {'a':'ア','i':'イ','u':'ウ','e':'エ','o':'ヲ','oo':'オ','ir':'ウ̄','er':'オ̄'},
   'k':  {'a':'カ','i':'キ','u':'ク','e':'ケ','o':'コ','oo':'コ'},
@@ -351,6 +351,7 @@ function kanaToPojDiag(kanaStr) {
   let tone = 1, nasal = false;
   if (s.endsWith('n')) { nasal = true; s = s.slice(0, -1); }
   const tm = s.match(/^(.+?)([1-8])$/);
+  const explicitTone = !!tm;   // K413rd：V2-STOP 逆向只對明寫調號者判（parse_body 字身探針語義不受影響）
   if (tm) { tone = parseInt(tm[2]); s = tm[1]; }
   if (!s) return EMPTY;
   const tokens = k2pTokenize(s);
@@ -539,6 +540,19 @@ function kanaToPojDiag(kanaStr) {
     // 無尾／鼻尾候選（i̍ⁿ、n̍g、ka…）非法，剔除
     const legal = candidates.filter(c => ['p','t','k','h'].includes(c.final));
     if (legal.length) candidates.splice(0, candidates.length, ...legal);  // candidates 為 const，就地置換
+  } else if (explicitTone) {
+    // K413rd：入聲通則逆向——韻尾 p/t/k 必配 4/8 調（＝channels V2-STOP）；殺進 killed 帶規則名；與 kana_poj.py 同步
+    const keep = [];
+    for (const c of candidates) {
+      if (['p','t','k'].includes(c.final)) killed.push({poj: c.display, ascii: c.ascii, rule: 'V2-STOP'});
+      else keep.push(c);
+    }
+    candidates.splice(0, candidates.length, ...keep);
+  }
+  if (tokens.length === 2 && tokens[0] === 'エ' && (tokens[1] === 'ン' || tokens[1] === 'ク')) {
+    // K413rd（站主裁 2026-09-04）：本書假名寫法——零聲母 e＋ng/k 必寫 イエン／イエク；裸 エン／エク＝AI 判讀漏 イ
+    for (const c of candidates) killed.push({poj: c.display, ascii: c.ascii, rule: 'K413-KANA1'});
+    candidates.splice(0, candidates.length);
   }
 
   const seen = new Set();
