@@ -4,7 +4,7 @@
 // 提供：parsePoj / pojToKana / kanaToPoj
 // 引擎版本戳（修法三 2026-08-01 起）：與 v2_redo/kana_poj.py 及各內嵌副本必須同值；
 // export_site_data.py 上站複製前對版靠它。改引擎規則＝同批改所有副本＋此戳。
-const ENGINE_VERSION = '2026-09-04';   // K413rd：V2-STOP 逆向（p/t/k 尾必 4/8；只對明寫調號）＋K413-KANA1（エン／エク 必 イエ）；與 kana_poj.py 同步
+const ENGINE_VERSION = '2026-09-05';   // F1（M008 校對收尾）：F1-DUPVOW 疊母音非法＋F1-LONE 單獨假名限母音(底字)/ンム；前版 K413rd V2-STOP 逆向＋K413-KANA1；與 kana_poj.py 同步
 const OV = {
   '':   {'a':'ア','i':'イ','u':'ウ','e':'エ','o':'ヲ','oo':'オ','ir':'ウ̄','er':'オ̄'},
   'k':  {'a':'カ','i':'キ','u':'ク','e':'ケ','o':'コ','oo':'コ'},
@@ -552,6 +552,18 @@ function kanaToPojDiag(kanaStr) {
   if (tokens.length === 2 && tokens[0] === 'エ' && (tokens[1] === 'ン' || tokens[1] === 'ク')) {
     // K413rd（站主裁 2026-09-04）：本書假名寫法——零聲母 e＋ng/k 必寫 イエン／イエク；裸 エン／エク＝AI 判讀漏 イ
     for (const c of candidates) killed.push({poj: c.display, ascii: c.ascii, rule: 'K413-KANA1'});
+    candidates.splice(0, candidates.length);
+  }
+  // F1（M008 校對收尾場站主裁 2026-09-04；與 kana_poj.py 同步）：kana 形規則兩條——
+  // ①F1-DUPVOW 連續相同母音假名（アア型）非法 ②F1-LONE 單一假名 token 僅母音（去 macron 底字
+  // ∈ アイウエオヲ；ヰ/ヱ 入口已正規化）＋成節鼻音 ン/ム 合法，其餘（CV 假名、macron 子音五枚、ヌ）非法。
+  const F1_VOW = new Set(['ア','イ','ウ','エ','オ','ヲ']);
+  if (tokens.some((a, i) => i > 0 && a === tokens[i-1] && F1_VOW.has(a))) {
+    for (const c of candidates) killed.push({poj: c.display, ascii: c.ascii, rule: 'F1-DUPVOW'});
+    candidates.splice(0, candidates.length);
+  }
+  if (tokens.length === 1 && !F1_VOW.has(tokens[0].replace(/\u0304/g, '')) && tokens[0] !== 'ン' && tokens[0] !== 'ム') {
+    for (const c of candidates) killed.push({poj: c.display, ascii: c.ascii, rule: 'F1-LONE'});
     candidates.splice(0, candidates.length);
   }
 
