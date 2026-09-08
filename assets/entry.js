@@ -136,7 +136,7 @@ function headKanaHTML(head) {
   let out = '';
   for (const t of head.kana || []) {
     out += esc(t.k) + (t.tn ? `<sup class="tn">${esc(t.tn)}</sup>` : '');
-    if (t.orig) {                      // 173rd：head 校改存印（遊 J150-9／窩 J150-16）
+    if (t.orig && t.orig.at !== 'kanji') {   // 173rd：head 校改存印（遊 J150-9／窩 J150-16）；M019：at=kanji 者 † 改掛漢字（見 headKanjiHTML；p0127-1-04 換審→換蕃 曾掛錯到假名）
       out += `<sup class="em" title="校改存印：原印面「${esc(t.orig.was)}」｜${esc(t.orig.note)}">†</sup>`;
     }
     if (t.sep === '--') out += '--';
@@ -337,7 +337,10 @@ function collectOrig(e) {
     });
   });
   (e.refs || []).forEach(r => scan(r.kanji));
-  (((e.head || {}).kana) || []).forEach(t => { if (t && t.orig) out.push({ now: t.k + (t.tn || ''), orig: t.orig }); });
+  const hu = ((e.head || {}).kanji_units) || [];
+  (((e.head || {}).kana) || []).forEach((t, i) => {   // M019：at=kanji 者「現值」取第 i 個漢字單位（原為假名，圖例寫成 原印面「審」→「ホアヌ」）
+    if (t && t.orig) out.push({ now: t.orig.at === 'kanji' ? (hu[i] || (e.head || {}).kanji || '') : t.k + (t.tn || ''), orig: t.orig });
+  });
   return out;
 }
 function blockOriginal(e) {
@@ -436,11 +439,23 @@ function kanjiNotesHTML(e) {
 
 // 原冊數位化區表頭：假名見出し（調記）＋【漢字】——仿原冊樣貌；
 // 無漢字／缺字條目 □ 照印恢復方格，不做 POJ 替代（2026-07-17 版面改版）
+// M019：表頭漢字 † 掛字（SCHEMA_V2 orig：at=kanji→掛漢字右上）——head.kana[i].orig.at==='kanji' ＝第 i 個漢字單位被校改
+function headKanjiHTML(h) {
+  const units = (h.kanji_units && h.kanji_units.length) ? h.kanji_units : [h.kanji || ''];
+  const kana = h.kana || [];
+  return units.map((u, i) => {
+    const t = kana[i];
+    const em = (t && t.orig && t.orig.at === 'kanji')
+      ? `<sup class="em" title="校改存印：原印面「${esc(t.orig.was)}」｜${esc(t.orig.note)}">†</sup>` : '';
+    return esc(u) + em;
+  }).join('');
+}
+
 function origHead(e) {
   const h = e.head || {};
   const kanaTxt = (h.kana || []).map(t => t.k + (t.tn || '') + (t.sep === '--' ? '--' : t.sep ? ' ' : '')).join('');
   const attrs = `${editAttr('head')}${origAttr(h.kanji + '｜' + kanaTxt + '｜' + h.poj, '')}`;
-  return `<div class="orighead"${attrs}><span class="okn">${headKanaHTML(h)}</span><span class="ohz">【${esc(h.kanji)}】</span></div>`;
+  return `<div class="orighead"${attrs}><span class="okn">${headKanaHTML(h)}</span><span class="ohz">【${headKanjiHTML(h)}】</span></div>`;
 }
 
 function locText(e) {
