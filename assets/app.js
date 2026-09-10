@@ -16,7 +16,7 @@ function stripDia(s) {
           .replace(/ⁿ/g, 'n').toLowerCase();
 }
 function normKanaQ(s) {
-  return hira2kata(s).replace(/[·̄̅\s0-9a-zA-Z\-ー]/g, '').replace(/ヰ/g, 'イ'); // ヰ視同イ（2026-07-22）
+  return hira2kata(s).replace(/[·̄̅\s0-9a-zA-Z\-ー]/g, '').replace(/ヰ/g, 'イ').replace(/ヱ/g, 'エ').replace(/ヤ/g, 'ア'); // ヰ視同イ（2026-07-22）；ヱ視同エ（2026-08-12 K248th，查詢端漏補、M025 補齊）；ヤ視同ア（M025 2026-09-10）——與 export kana_norm 同步
 }
 function hasCJK(s) { return /[㐀-鿿豈-﫿□々]/.test(s); }
 // 混合缺字表頭：□ 逐位以對應 POJ 音節取代（□□哭 → āuⁿ āuⁿ 哭；2026-07-12 夥伴回饋補充）

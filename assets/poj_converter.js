@@ -4,7 +4,7 @@
 // 提供：parsePoj / pojToKana / kanaToPoj
 // 引擎版本戳（修法三 2026-08-01 起）：與 v2_redo/kana_poj.py 及各內嵌副本必須同值；
 // export_site_data.py 上站複製前對版靠它。改引擎規則＝同批改所有副本＋此戳。
-const ENGINE_VERSION = '2026-09-05';   // F1（M008 校對收尾）：F1-DUPVOW 疊母音非法＋F1-LONE 單獨假名限母音(底字)/ンム；前版 K413rd V2-STOP 逆向＋K413-KANA1；與 kana_poj.py 同步
+const ENGINE_VERSION = '2026-09-10';   // M025：ヤ 照印入資料、轉換視同ア（鏡像 ヰ→イ／ヱ→エ；p0959-1-01 シヤウ2 白名單退場）；前版 F1（M008 校對收尾）：F1-DUPVOW 疊母音非法＋F1-LONE 單獨假名限母音(底字)/ンム；與 kana_poj.py 同步
 const OV = {
   '':   {'a':'ア','i':'イ','u':'ウ','e':'エ','o':'ヲ','oo':'オ','ir':'ウ̄','er':'オ̄'},
   'k':  {'a':'カ','i':'キ','u':'ク','e':'ケ','o':'コ','oo':'コ'},
@@ -347,6 +347,7 @@ function kanaToPojDiag(kanaStr) {
   s = s.replace(/ゥ/g, 'ウ').replace(/ぅ/g, 'う'); // J28-1 長音第二拍小字正規化（HR004 補條款 2026-07-10）
   s = s.replace(/ヰ/g, 'イ').replace(/ゐ/g, 'い'); // ヰ 照印入資料、轉換視同イ（2026-07-22 裁決）
   s = s.replace(/ヱ/g, 'エ').replace(/ゑ/g, 'え'); // ヱ 照印入資料、轉換視同エ（2026-08-12 K248th 裁決，鏡像ヰ規則）
+  s = s.replace(/ヤ/g, 'ア').replace(/や/g, 'あ'); // ヤ 照印入資料、轉換視同ア（2026-09-07 M012 裁定、M025 落地，鏡像ヰ／ヱ規則；全庫唯一實例 p0959-1-01 シヤウ2）
   if (!s) return EMPTY;
   let tone = 1, nasal = false;
   if (s.endsWith('n')) { nasal = true; s = s.slice(0, -1); }
@@ -556,7 +557,7 @@ function kanaToPojDiag(kanaStr) {
   }
   // F1（M008 校對收尾場站主裁 2026-09-04；與 kana_poj.py 同步）：kana 形規則兩條——
   // ①F1-DUPVOW 連續相同母音假名（アア型）非法 ②F1-LONE 單一假名 token 僅母音（去 macron 底字
-  // ∈ アイウエオヲ；ヰ/ヱ 入口已正規化）＋成節鼻音 ン/ム 合法，其餘（CV 假名、macron 子音五枚、ヌ）非法。
+  // ∈ アイウエオヲ；ヰ/ヱ/ヤ 入口已正規化）＋成節鼻音 ン/ム 合法，其餘（CV 假名、macron 子音五枚、ヌ）非法。
   const F1_VOW = new Set(['ア','イ','ウ','エ','オ','ヲ']);
   if (tokens.some((a, i) => i > 0 && a === tokens[i-1] && F1_VOW.has(a))) {
     for (const c of candidates) killed.push({poj: c.display, ascii: c.ascii, rule: 'F1-DUPVOW'});
