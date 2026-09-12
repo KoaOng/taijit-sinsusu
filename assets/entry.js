@@ -210,7 +210,10 @@ function senseHTML(s, i, total, modern, zhStatus, e) {
   const base = `senses[${i}]`;
   let gloss;
   if (!modern) {
-    gloss = `<span class="gloss"${editAttr(base + '.gloss')}${origAttr(textOfUnits(s.gloss), rubyDump(s.gloss, false))}>${unitsHTML(s.gloss, false)}</span>`;
+    // M030：gloss 級文字校改存印（SCHEMA_V2 §orig 文字級擴至 gloss）——只標原冊數位化層，現代化層不標
+    const gem = (s.orig && s.orig.at === 'jp')
+      ? `<sup class="em" title="校改存印：原印面「${esc(s.orig.was)}」｜${esc(s.orig.note)}">†</sup>` : '';
+    gloss = `<span class="gloss"${editAttr(base + '.gloss')}${origAttr(textOfUnits(s.gloss), rubyDump(s.gloss, false))}>${unitsHTML(s.gloss, false)}${gem}</span>`;
   } else if (s.zh) {
     gloss = `<span class="zh"${editAttr(base + '.zh')}${origAttr(s.zh, '')}>${zhHTML(s.zh, s.zh_units)}</span>`;
   } else if ((s.gloss || []).length) {
@@ -330,6 +333,7 @@ function collectOrig(e) {
   });
   (e.senses || []).forEach(s => {
     scan(s.gloss);
+    if (s.orig) out.push({ now: textOfUnits(s.gloss), orig: s.orig });   // M030：gloss 級文字校改存印
     (s.notes || []).forEach(n => scan(n.units));
     (s.examples || []).forEach(x => {
       scan(x.tw); scan(x.jp);
