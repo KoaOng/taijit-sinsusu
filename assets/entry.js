@@ -255,7 +255,13 @@ function senseHTML(s, i, total, modern, zhStatus, e) {
     return `<div class="example"${editAttr(ep + '.modern')}${origAttr(orig, twModernDump(x.tw_modern))}><span class="tw">${twModernHTML(x.tw_modern)}</span>` +
            `<span class="eqsign">＝</span>${zh}</div>`;
   }).join('');
-  return `<div class="sense">${mk ? `<span class="marker">${esc(mk)}</span>` : ''}${gloss}${notes}${inrefs}${exs}</div>`;
+  // M032：標記級校改存印（SCHEMA_V2 §orig 標記級；首例 p0163-2-07）——只標原冊數位化層；印面無標記時 was 為 null → 顯示「（無）」
+  const mkEm = (!modern && s.orig_marker)
+    ? `<sup class="em" title="校改存印：原印面「${esc(origWasText(s.orig_marker))}」｜${esc(s.orig_marker.note)}">†</sup>` : '';
+  return `<div class="sense">${mk ? `<span class="marker">${esc(mk)}${mkEm}</span>` : mkEm}${gloss}${notes}${inrefs}${exs}</div>`;
+}
+function origWasText(o) {               // M032：標記級 orig 之 was 可為 null（印面無標記）
+  return (o && o.was != null && o.was !== '') ? o.was : '（無）';
 }
 
 function refUnitsModernHTML(units) {
@@ -331,9 +337,12 @@ function collectOrig(e) {
   const scan = units => (units || []).forEach(u => {
     if (u && u.r && u.r.orig) out.push({ now: u.r.orig.at === 'kana' ? (u.r.k || '') + (u.r.tn || '') : u.u, orig: u.r.orig });
   });
-  (e.senses || []).forEach(s => {
+  const nSense = (e.senses || []).length;
+  (e.senses || []).forEach((s, si) => {
     scan(s.gloss);
     if (s.orig) out.push({ now: textOfUnits(s.gloss), orig: s.orig });   // M030：gloss 級文字校改存印
+    if (s.orig_marker) out.push({ now: markerOf(s, si, nSense),          // M032：標記級（原印面「（無）」→「①」）
+                                  orig: Object.assign({}, s.orig_marker, { was: origWasText(s.orig_marker) }) });
     (s.notes || []).forEach(n => scan(n.units));
     (s.examples || []).forEach(x => {
       scan(x.tw); scan(x.jp);
