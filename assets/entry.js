@@ -234,7 +234,7 @@ function senseHTML(s, i, total, modern, zhStatus, e) {
   const inrefs = ((e && e.refs) || []).map((r, ri) => ({ r, ri }))
     .filter(x => (typeof x.r.sense_i === 'number' ? x.r.sense_i === i : x.r.senses && x.r.senses === mk))
     .map(x => {
-      const p = refLineInner(x.r, x.ri, modern);
+      const p = refLineInner(x.r, x.ri, modern, (e && e.head && e.head.dial) || '');
       const sn = x.r.senses ? `<span class="chip">${esc(x.r.senses)}</span>` : '';
       return `<span class="refin">${p.body}${sn}${p.nt}</span>`;
     }).join('');
@@ -282,20 +282,38 @@ function refUnitsModernHTML(units) {
   }).join('');
 }
 
-function refLineInner(r, ri, modern) {
+function refLineInner(r, ri, modern, headDial) {
   const units = modern ? r.kanji_modern : r.kanji;
   // 參照註三型位置（批次二 2026-07-12 J-B2-5／R04·R11 裁決）：in＝括弧內（百）、before＝槽前（閑）、after＝槽後（攬々）
   const noteHTML = (modern && r.note_zh) ? zhHTML(r.note_zh, r.note_zh_units)
                  : (r.note ? esc(r.note) : '');
+  // M015 B（C273rd）：槽前註改由 refs.pre_note／pre_note_zh 承載（不論是否腔口白名單），與 note 分兩軸。
+  // 現代化視圖＝dial 已升表頭者不前綴（rid 115），否則前綴 pre_note_zh‖pre_note；原冊視圖＝一律照印 pre_note。
+  // 無 pre_note 之舊資料（站面尚未重出者）仍走下方 before 分支＝退路，不因先上碼後重出而掉字。
+  // before 型之既有 note_zh 即該槽前註之中譯（A 案時期槽前註佔 note 格所致）＝遷 pre 軸時一併帶過來，
+  // 否則已上站之 225 筆會由「（同安腔）」退回照印「（同）」。待 W2 補 pre_note_zh 後該欄優先。
+  const preZh = r.pre_note_zh || (r.note_pos === 'before' ? r.note_zh : '');
+  const preZhUnits = r.pre_note_zh ? r.pre_note_zh_units
+                   : (r.note_pos === 'before' ? r.note_zh_units : null);
+  const preHTML = r.pre_note
+    ? ((modern && preZh) ? zhHTML(preZh, preZhUnits) : esc(r.pre_note))
+    : '';
   let inner = `〔${modern ? refUnitsModernHTML(units) : unitsHTML(units, false)}${(noteHTML && r.note_pos === 'in') ? `<span class="src">${noteHTML}</span>` : ''}〕`;
   if (r.target) {                          // 參照超連結（2026-07-12 夥伴回饋；查無目標不連）
     inner = `<a class="reflink" href="entry.html?id=${encodeURIComponent(r.target)}" title="前往參照條目">${inner}</a>`;
   }
   let body = `＝${inner}`;                 // 照印呈現（2026-07-09 fid=3 裁決）
   let nt = '';
+  // 槽前註軸（M015 B）：腔口已升表頭（2026-07-25 rid 115）者現代化視圖不前綴；原冊視圖照印
+  // 是否已升表頭＝比對本條目 head.dial 與槽前註原文（M015 B 刻意不新增旗、也不借 r.dial——
+  // r.dial 屬 note 軸，中譯線條文以它決定不產 note_zh，借用會讓 in-note 說明被連坐跳過不譯）。
+  const preUp = !!r.pre_note && (r.dial === true || (!!headDial && r.pre_note === headDial));
+  if (preHTML && !(modern && preUp)) {
+    body = `<span class="src">（${preHTML}）</span>${body}`;
+  }
   if (noteHTML && r.note_pos === 'before') {
-    // 腔口已升表頭（2026-07-25 rid 115）：現代化視圖不再前綴（腔）；原冊視圖照印不動
-    if (!(modern && r.dial)) body = `<span class="src">（${noteHTML}）</span>${body}`;
+    // before 型之 note ＝槽前註副本：pre_note 在時已由上段輸出，不重複；無者走此退路
+    if (!preHTML && !(modern && r.dial)) body = `<span class="src">（${noteHTML}）</span>${body}`;
   } else if (noteHTML && r.note_pos === 'after') {
     nt = `<span class="src">（${noteHTML}）。</span>`;
   } else if (noteHTML && r.note_pos !== 'in') {
@@ -312,7 +330,7 @@ function refsHTML(e, modern) {
   return e.refs.map((r, ri) => {
     if (typeof r.sense_i === 'number' && r.sense_i < total) return '';   // 已內嵌於該義項行
     if (r.senses && markers.indexOf(r.senses) >= 0) return '';           // 舊資料 marker 對應保險
-    const p = refLineInner(r, ri, modern);
+    const p = refLineInner(r, ri, modern, (e.head && e.head.dial) || '');
     const sn = r.senses ? `<span class="chip">${esc(r.senses)}</span>` : '';
     return `<div class="refline"><span class="chip">參照</span>${p.body}${sn}${p.nt}</div>`;
   }).join('');
