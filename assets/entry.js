@@ -93,16 +93,30 @@ function rubyModern(unit) {
 }
 
 function unitsHTML(units, modern) {
+  // 註／日釋內參照連結（2026-07-12 夥伴回饋；兩區共標）。
+  // M033（C274）：**相鄰同 ref 之單位併成單一 <a>**——多字段參照（荖藤 型）export 端逐格掛 ref，
+  // 若逐格各包一個 <a>，畫面上會是兩個並排的連結而非一個詞。單字案（連續長度 1）輸出與舊制逐字相同。
+  const arr = units || [];
   const parts = [];
-  for (const u of units || []) {
-    let h = modern ? rubyModern(u) : rubyOrig(u);
-    if (u.ref) {                           // 註／日釋內參照連結（2026-07-12 夥伴回饋；兩區共標）
-      if (parts.length && parts[parts.length - 1] === 'ー') {
-        h = parts.pop() + h;               // 前一個裸 ー 併入連結
-      }
-      h = `<a class="reflink" href="entry.html?id=${encodeURIComponent(u.ref)}" title="前往參照條目">${h}</a>`;
+  let i = 0;
+  while (i < arr.length) {
+    const u = arr[i];
+    if (!u.ref) {
+      parts.push(modern ? rubyModern(u) : rubyOrig(u));
+      i += 1;
+      continue;
     }
-    parts.push(h);
+    let inner = '';
+    let j = i;
+    while (j < arr.length && arr[j].ref === u.ref) {
+      inner += modern ? rubyModern(arr[j]) : rubyOrig(arr[j]);
+      j += 1;
+    }
+    if (parts.length && parts[parts.length - 1] === 'ー') {
+      inner = parts.pop() + inner;         // 前一個裸 ー 併入連結
+    }
+    parts.push(`<a class="reflink" href="entry.html?id=${encodeURIComponent(u.ref)}" title="前往參照條目">${inner}</a>`);
+    i = j;
   }
   return parts.join('');
 }
